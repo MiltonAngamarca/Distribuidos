@@ -435,10 +435,30 @@ func main() {
 
 	// Configurar rutas
 	r := mux.NewRouter()
-	r.HandleFunc("/asientos", server.handleGetAsientos).Methods("GET")
-	r.HandleFunc("/reservar", server.handleReservarAsiento).Methods("POST")
-	r.HandleFunc("/liberar", server.handleLiberarAsiento).Methods("POST")
-	r.HandleFunc("/health", server.handleHealthCheck).Methods("GET")
+
+	// Middleware CORS - permite peticiones desde el frontend (ej. http://localhost:4321)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Ajusta el origen si quieres restringir a un host concreto
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "false")
+
+			// Responder preflight inmediatamente
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	r.HandleFunc("/asientos", server.handleGetAsientos).Methods("GET", "OPTIONS")
+	r.HandleFunc("/reservar", server.handleReservarAsiento).Methods("POST", "OPTIONS")
+	r.HandleFunc("/liberar", server.handleLiberarAsiento).Methods("POST", "OPTIONS")
+	r.HandleFunc("/health", server.handleHealthCheck).Methods("GET", "OPTIONS")
 
 
 
