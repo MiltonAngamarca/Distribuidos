@@ -168,12 +168,13 @@ for (const node of DISTRIBUTED_NODES) {
 </Layout>
 
 <script>
-  // Definir la interfaz Seat
+  // Definir la interfaz Seat (acepta tanto `server_id` como `servidor`)
   interface Seat {
     numero: number;
     disponible: boolean;
     cliente?: string;
     servidor?: string;
+    server_id?: string;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -279,20 +280,26 @@ for (const node of DISTRIBUTED_NODES) {
     };
 
     // Función para renderizar asientos
-     const renderSeats = (seats: Seat[] | { [key: string]: Seat }) => {
-       if (!seatsContainer) return;
-       seatsContainer.innerHTML = '';
+    const renderSeats = (seats: Seat[] | { [key: string]: Seat }) => {
+      if (!seatsContainer) return;
+      seatsContainer.innerHTML = '';
 
-       // Manejar tanto arrays como objetos de asientos
-       const seatsArray = Array.isArray(seats) ? seats : Object.values(seats);
-       
-       // Ordenar los asientos por número para garantizar una renderización consistente
-       const sortedSeats = seatsArray.sort((a, b) => a.numero - b.numero);
+      // Manejar tanto arrays como objetos de asientos
+      const seatsArray = Array.isArray(seats) ? seats : Object.values(seats);
+
+      // Normalizar campos: algunos nodos devuelven `server_id`, el front usa `servidor`
+      const normalized = seatsArray.map((s: any) => ({
+        ...s,
+        servidor: s.servidor || s.server_id || '',
+      }));
+
+      // Ordenar los asientos por número para garantizar una renderización consistente
+      const sortedSeats = normalized.sort((a: Seat, b: Seat) => a.numero - b.numero);
 
       sortedSeats.forEach((seat: Seat) => {
         const seatElement = document.createElement('div');
         const isOccupied = !seat.disponible;
-        
+
         seatElement.className = `p-3 rounded-lg text-center cursor-pointer transition-all transform hover:scale-110 ${
           isOccupied ? 'bg-red-600/70 hover:bg-red-600/90' : 'bg-green-500/80 hover:bg-green-500'
         }`;
@@ -348,7 +355,9 @@ for (const node of DISTRIBUTED_NODES) {
         });
 
         const result = await response.json();
-        
+        console.log('Reserve response raw:', result);
+        logActivity(`DEBUG reserve response: ${JSON.stringify(result)}`, 'info');
+
         if (result.success) {
           showNotification(`Asiento ${seatNumber} reservado exitosamente para ${clientName}`, 'success');
           logActivity(`✅ Consenso alcanzado - Asiento ${seatNumber} reservado`, 'success');
@@ -381,7 +390,9 @@ for (const node of DISTRIBUTED_NODES) {
         });
 
         const result = await response.json();
-        
+        console.log('Free response raw:', result);
+        logActivity(`DEBUG free response: ${JSON.stringify(result)}`, 'info');
+
         if (result.success) {
           showNotification(`Asiento ${seatNumber} liberado exitosamente`, 'success');
           logActivity(`✅ Consenso alcanzado - Asiento ${seatNumber} liberado`, 'success');

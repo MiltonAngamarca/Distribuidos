@@ -6,13 +6,13 @@ interface Props {
   server_id?: string;
 }
 
-const { numero, disponible, cliente, server_id } = Astro.props;
+const { numero, disponible, cliente, server_id, servidor } = Astro.props;
 ---
 
 <div class={`seat ${disponible ? 'disponible' : 'ocupado'}`}>
   <div class="seat-numero">{numero}</div>
   <div class="seat-info">
     <div class="seat-cliente">{cliente || ''}</div>
-    <div class="seat-server">{server_id || ''}</div>
+    <div class="seat-server">{servidor || server_id || ''}</div>
   </div>
 </div>

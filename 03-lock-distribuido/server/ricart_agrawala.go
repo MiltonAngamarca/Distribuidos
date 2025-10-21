@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 // Estado del nodo respecto a la sección crítica
@@ -57,17 +58,11 @@ type Node struct {
 
 // NewNode crea un nuevo nodo para el algoritmo
 func NewNode(id string, peers []string) *Node {
-	// Filter out self from peers to avoid self-messages
-	var filteredPeers []string
-	for _, peer := range peers {
-		if peer != id {
-			filteredPeers = append(filteredPeers, peer)
-		}
-	}
-	
+	// Simplificar: aceptar la lista de peers tal cual; el filtrado de self
+	// se hará en quien crea el nodo (main.go)
 	n := &Node{
 		ID:              id,
-		Peers:           filteredPeers,
+		Peers:           peers,
 		Clock:           NewLamportClock(),
 		State:           Released,
 		RepliesNeeded:   make(map[string]bool),
@@ -82,17 +77,19 @@ func (n *Node) RequestCS() {
 	n.mu.Lock()
 	n.State = Wanted
 	n.RequestTime = n.Clock.Increment()
-
+	// ----> INICIO DEL CAMBIO <----
+	// Limpiar el mapa de respuestas necesarias para asegurar un estado fresco
+	n.RepliesNeeded = make(map[string]bool)
 	// Necesitamos respuesta de todos los peers
 	for _, peer := range n.Peers {
-		if peer != n.ID {
-			n.RepliesNeeded[peer] = true
-		}
+		// La lista n.Peers ya viene filtrada desde main.go, no contiene n.ID
+		n.RepliesNeeded[peer] = true
 	}
+	// ----> FIN DEL CAMBIO <----
 	n.mu.Unlock()
 
 	// Si no hay otros peers, entramos directamente
-	if len(n.Peers) <= 1 {
+	if len(n.Peers) == 0 {
 		n.enterCS()
 		return
 	}
@@ -134,6 +131,12 @@ func (n *Node) enterCS() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	n._enterCS()
+}
+
+// _enterCS es la lógica interna para entrar a la sección crítica.
+// ASUME QUE EL MUTEX YA ESTÁ ADQUIRIDO.
+func (n *Node) _enterCS() {
 	if n.State == Wanted {
 		log.Printf("[%s] Entering critical section", n.ID)
 		n.State = Held
@@ -196,7 +199,8 @@ func (n *Node) handleReply(msg Message) {
 
 		// Si ya tenemos todas las respuestas, podemos entrar a la CS
 		if len(n.RepliesNeeded) == 0 {
-			n.enterCS()
+			// Llamar a la versión interna porque ya tenemos el lock
+			n._enterCS()
 		}
 	}
 }
@@ -223,24 +227,42 @@ func (n *Node) sendReply(peerID string) {
 
 // sendMessage envía un mensaje a un peer
 func (n *Node) sendMessage(peerID string, msg Message) {
+	// No enviamos mensajes a nosotros mismos
+	if peerID == n.ID {
+		return
+	}
+
 	jsonData, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("[%s] Error marshalling message: %v", n.ID, err)
 		return
 	}
 
-	// No enviamos mensajes a nosotros mismos
-	if peerID == n.ID {
-		return
-	}
-	
 	// Obtener la URL del peer usando la función findPeerURL
 	url := n.findPeerURL(peerID)
 
-	_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("[%s] Failed to send message to %s at %s: %v", n.ID, peerID, url, err)
+	// Lógica de reintentos con backoff exponencial
+	maxRetries := 3
+	retryDelay := 100 * time.Millisecond
+
+	for i := 0; i < maxRetries; i++ {
+		client := http.Client{Timeout: 2 * time.Second}
+		resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
+		if err == nil {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			if err == nil && resp.StatusCode == http.StatusOK {
+				return
+			}
+		}
+
+		log.Printf("[%s] Failed to send message to %s (attempt %d/%d): %v", n.ID, peerID, i+1, maxRetries, err)
+		time.Sleep(retryDelay)
+		retryDelay *= 2
 	}
+
+	log.Printf("[%s] CRITICAL: Could not send message to %s after %d attempts.", n.ID, peerID, maxRetries)
 }
 
 // findPeerURL encuentra la URL de un peer por su ID
@@ -256,5 +278,19 @@ func (n *Node) findPeerURL(nodeID string) string {
 	default:
 		// Fallback para otros casos
 		return fmt.Sprintf("http://%s/internal/message", nodeID)
+	}
+}
+
+// CancelCSRequest aborta un intento de entrar en la sección crítica (ej. por timeout)
+func (n *Node) CancelCSRequest() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	// Solo actuar si estábamos esperando para entrar
+	if n.State == Wanted {
+		log.Printf("[%s] Canceling CS request due to timeout.", n.ID)
+		n.State = Released
+		n.RepliesNeeded = make(map[string]bool)
+		// Nota: No se envían respuestas diferidas aquí porque nunca entramos en la CS.
 	}
 }
