@@ -1,0 +1,471 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Fetch initial data from distributed nodes (no load balancer)
+const DISTRIBUTED_NODES = [
+  'http://localhost:8081',
+  'http://localhost:8082', 
+  'http://localhost:8083'
+];
+
+let response;
+let asientos = [];
+let server_id = 'Distributed System';
+
+// Try to fetch from any available node
+for (const node of DISTRIBUTED_NODES) {
+  try {
+    response = await fetch(`${node}/asientos`);
+    if (response.ok) {
+      const data = await response.json();
+      asientos = data.asientos;
+      server_id = `Node: ${node.split(':')[2]}`;
+      break;
+    }
+  } catch (err) {
+    console.error(`Error fetching from ${node}:`, err);
+  }
+}
+---
+
+<Layout title='Sistema de Reservas - Lock Distribuido (Ricart-Agrawala)'>
+  <main class='min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8'>
+    <div class='max-w-7xl mx-auto'>
+      <!-- Header -->
+      <header class='text-center mb-8'>
+        <h1 class='text-4xl font-bold text-blue-400'>
+          🔐 Sistema con Algoritmo Ricart-Agrawala
+        </h1>
+        <p class='text-blue-400 mt-2'>
+          <span class='font-semibold'>✅ Solución 2:</span> Lock distribuido sin coordinador central - Consenso entre nodos
+        </p>
+        <div class='mt-4 p-4 bg-blue-900/30 rounded-lg border border-blue-400/30'>
+          <h3 class='text-lg font-semibold text-blue-300 mb-2'>
+            Arquitectura del Sistema:
+          </h3>
+          <div class='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+            <div class='bg-purple-900/30 p-3 rounded border border-purple-400/30'>
+              <strong class='text-purple-300'>Nodos Ricart-Agrawala</strong><br />
+              Puertos: 8081, 8082, 8083<br />
+              Comunicación peer-to-peer
+            </div>
+            <div class='bg-gray-700/30 p-3 rounded border border-gray-400/30'>
+              <strong class='text-gray-300'>MongoDB</strong><br />
+              Puerto: 27017<br />
+              Persistencia de datos
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Panel de Control -->
+      <div class='bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 mb-8 shadow-lg border border-blue-400/20'>
+        <div class='grid grid-cols-1 md:grid-cols-2 gap-6'>
+          <!-- Información del Servidor -->
+          <div>
+            <label class='block text-sm font-medium text-blue-300 mb-2'>Sistema Distribuido</label>
+            <div class='bg-gray-700 border-gray-600 text-white rounded-lg p-2.5'>
+              <span id='current-server'>Nodos P2P: 8081, 8082, 8083</span>
+            </div>
+          </div>
+
+          <!-- Nombre del Cliente -->
+          <div>
+            <label for='client-name' class='block text-sm font-medium text-blue-300 mb-2'>Tu Nombre</label>
+            <input
+              type='text'
+              id='client-name'
+              placeholder='Ingresa tu nombre...'
+              class='w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500'
+            />
+          </div>
+        </div>
+
+        <!-- Botones de Control -->
+        <div class='flex flex-wrap gap-4 mt-6'>
+          <button
+            id='reload-button'
+            class='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors'
+          >
+            🔄 Recargar Asientos
+          </button>
+          <button
+            id='test-race-button'
+            class='bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition-colors'
+          >
+            ⚡ Probar Condición de Carrera
+          </button>
+        </div>
+      </div>
+
+      <!-- Información del Algoritmo -->
+      <div class='bg-blue-900/20 rounded-xl p-6 mb-8 border border-blue-400/30'>
+        <h3 class='text-xl font-semibold text-blue-300 mb-4'>🧠 Algoritmo Ricart-Agrawala</h3>
+        <div class='grid grid-cols-1 md:grid-cols-3 gap-6 text-sm'>
+          <div>
+            <h4 class='font-semibold text-blue-200 mb-2'>Características:</h4>
+            <ul class='space-y-1 text-gray-300'>
+              <li>• Sin coordinador central</li>
+              <li>• Todos los nodos son iguales</li>
+              <li>• Consenso distribuido</li>
+              <li>• Sin punto único de fallo</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class='font-semibold text-blue-200 mb-2'>Arquitectura P2P:</h4>
+            <div class='text-center space-y-2'>
+              <div class='flex justify-center space-x-2'>
+                <div class='w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-xs'>A</div>
+                <div class='w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-xs'>B</div>
+              </div>
+              <div class='w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-xs mx-auto'>C</div>
+              <p class='text-xs text-gray-400'>Comunicación directa</p>
+            </div>
+          </div>
+          <div>
+            <h4 class='font-semibold text-blue-200 mb-2'>Proceso:</h4>
+            <ul class='space-y-1 text-gray-300'>
+              <li>• Nodo solicita permiso a todos</li>
+              <li>• Espera confirmación de todos</li>
+              <li>• Ejecuta sección crítica</li>
+              <li>• Libera y notifica a otros</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Asientos -->
+      <div class='bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-blue-400/20'>
+        <h2 class='text-2xl font-semibold text-blue-300 mb-6'>Asientos Disponibles</h2>
+        
+        <div
+          class='grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-4'
+          id='seats-container'
+        >
+          <!-- Los asientos se cargarán aquí -->
+        </div>
+      </div>
+
+      <!-- Log de Actividad -->
+      <div class='mt-8 bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-blue-400/20'>
+        <h3 class='text-xl font-semibold text-blue-300 mb-4'>📋 Log de Actividad</h3>
+        <div
+          id='activity-log'
+          class='bg-gray-900 rounded-lg p-4 h-48 overflow-y-auto text-sm font-mono'
+        >
+          <div class='text-green-400'>Sistema iniciado - Algoritmo Ricart-Agrawala activo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div
+      id='notification'
+      class='fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50'
+    >
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Definir la interfaz Seat
+  interface Seat {
+    numero: number;
+    disponible: boolean;
+    cliente?: string;
+    servidor?: string;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const clientNameInput = document.getElementById('client-name') as HTMLInputElement;
+    const seatsContainer = document.getElementById('seats-container');
+    const reloadButton = document.getElementById('reload-button');
+    const testRaceButton = document.getElementById('test-race-button');
+    const activityLog = document.getElementById('activity-log');
+
+    if (!clientNameInput || !seatsContainer || !reloadButton || !testRaceButton || !activityLog) {
+      console.error('Elementos del DOM no encontrados');
+      return;
+    }
+
+    // Configuración de nodos distribuidos (arquitectura peer-to-peer)
+    const DISTRIBUTED_NODES = [
+        'http://localhost:8081',
+        'http://localhost:8082', 
+        'http://localhost:8083'
+    ];
+    let currentNodeIndex = 0;
+    
+    // Estado de nodos activos
+    let activeNodes = new Set(DISTRIBUTED_NODES);
+
+    // Función para mostrar notificaciones
+    const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+      const notification = document.getElementById('notification');
+      if (!notification) return;
+
+      notification.textContent = message;
+      notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 z-50 ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+      } text-white`;
+      
+      notification.style.transform = 'translateX(0)';
+      
+      setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+      }, 3000);
+    };
+
+    // Función para agregar logs
+    const logActivity = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = type === 'success' ? 'text-green-400' : 
+                          type === 'error' ? 'text-red-400' : 'text-blue-400';
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      
+      activityLog.appendChild(logEntry);
+      activityLog.scrollTop = activityLog.scrollHeight;
+    };
+
+    // Función para obtener el siguiente nodo disponible
+    const getNextNode = () => {
+        const node = DISTRIBUTED_NODES[currentNodeIndex];
+        currentNodeIndex = (currentNodeIndex + 1) % DISTRIBUTED_NODES.length;
+        return node;
+    };
+
+    // Función para hacer peticiones con failover entre nodos
+    const fetchFromNodes = async (endpoint: string, options = {}) => {
+        let lastError;
+        
+        // Intentar con todos los nodos disponibles
+        for (let i = 0; i < DISTRIBUTED_NODES.length; i++) {
+            const node = getNextNode();
+            try {
+                const response = await fetch(`${node}${endpoint}`, options);
+                if (response.ok) {
+                    return response;
+                }
+                throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+                lastError = error;
+                logActivity(`Error conectando a ${node}: ${(error as Error).message}`);
+            }
+        }
+        
+        throw lastError;
+    };
+
+    // Función para cargar asientos desde los nodos distribuidos
+    const fetchSeats = async () => {
+      try {
+        logActivity('Consultando asientos desde el sistema distribuido...', 'info');
+        const response = await fetchFromNodes('/asientos');
+        
+        if (!response.ok) throw new Error('Error al cargar los asientos');
+        
+        const data = await response.json();
+        renderSeats(data.asientos);
+        logActivity(`✅ Asientos cargados correctamente`, 'success');
+      } catch (error) {
+        console.error(error);
+        logActivity(`❌ Error al cargar asientos: ${(error as Error).message}`, 'error');
+        if (seatsContainer) {
+          seatsContainer.innerHTML = `<p class="text-red-400 col-span-full">❌ Error de conexión: ${(error as Error).message}</p>`;
+        }
+      }
+    };
+
+    // Función para renderizar asientos
+     const renderSeats = (seats: Seat[] | { [key: string]: Seat }) => {
+       if (!seatsContainer) return;
+       seatsContainer.innerHTML = '';
+
+       // Manejar tanto arrays como objetos de asientos
+       const seatsArray = Array.isArray(seats) ? seats : Object.values(seats);
+       
+       // Ordenar los asientos por número para garantizar una renderización consistente
+       const sortedSeats = seatsArray.sort((a, b) => a.numero - b.numero);
+
+      sortedSeats.forEach((seat: Seat) => {
+        const seatElement = document.createElement('div');
+        const isOccupied = !seat.disponible;
+        
+        seatElement.className = `p-3 rounded-lg text-center cursor-pointer transition-all transform hover:scale-110 ${
+          isOccupied ? 'bg-red-600/70 hover:bg-red-600/90' : 'bg-green-500/80 hover:bg-green-500'
+        }`;
+        seatElement.dataset.seatNumber = String(seat.numero);
+
+        if (isOccupied) {
+          seatElement.innerHTML = `
+            <span class="text-lg">🔒 ${seat.numero}</span><br>
+            <span class="text-xs">${seat.cliente || 'N/A'}</span>
+            ${seat.servidor ? `<br><span class="text-xs opacity-75">Srv: ${seat.servidor}</span>` : ''}
+          `;
+          seatElement.title = `Ocupado por: ${seat.cliente || 'N/A'}${seat.servidor ? ` (Servidor: ${seat.servidor})` : ''}`;
+        } else {
+          seatElement.innerHTML = `<span class="text-lg">💺 ${seat.numero}</span>`;
+          seatElement.title = 'Disponible - Click para reservar';
+        }
+
+        seatElement.addEventListener('click', () => handleSeatClick(seat.numero, isOccupied));
+        seatsContainer.appendChild(seatElement);
+      });
+    };
+
+    // Función para manejar clicks en asientos
+    const handleSeatClick = async (seatNumber: number, isOccupied: boolean) => {
+      const clientName = clientNameInput.value.trim();
+      
+      if (isOccupied) {
+        await freeSeat(seatNumber);
+      } else {
+        if (!clientName) {
+          showNotification('Por favor, ingresa tu nombre para reservar.', 'error');
+          clientNameInput.focus();
+          return;
+        }
+        await reserveSeat(seatNumber, clientName);
+      }
+    };
+
+    // Función para reservar asiento usando consenso distribuido
+    const reserveSeat = async (seatNumber: number, clientName: string) => {
+      try {
+        logActivity(`Iniciando reserva distribuida para asiento ${seatNumber}...`, 'info');
+        
+        const response = await fetchFromNodes('/reservar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            numero: seatNumber,
+            cliente: clientName
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification(`Asiento ${seatNumber} reservado exitosamente para ${clientName}`, 'success');
+          logActivity(`✅ Consenso alcanzado - Asiento ${seatNumber} reservado`, 'success');
+        } else {
+          showNotification(`Error: ${result.message}`, 'error');
+          logActivity(`❌ Fallo en consenso - ${result.message}`, 'error');
+        }
+        
+        await fetchSeats();
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        showNotification(`Error en reserva distribuida: ${errorMessage}`, 'error');
+        logActivity(`❌ Error en comunicación distribuida: ${errorMessage}`, 'error');
+      }
+    };
+
+    // Función para liberar asiento usando consenso distribuido
+    const freeSeat = async (seatNumber: number) => {
+      try {
+        logActivity(`Iniciando liberación distribuida para asiento ${seatNumber}...`, 'info');
+        
+        const response = await fetchFromNodes('/liberar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            numero: seatNumber
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification(`Asiento ${seatNumber} liberado exitosamente`, 'success');
+          logActivity(`✅ Consenso alcanzado - Asiento ${seatNumber} liberado`, 'success');
+        } else {
+          showNotification(`Error: ${result.message}`, 'error');
+          logActivity(`❌ Fallo en consenso - ${result.message}`, 'error');
+        }
+        
+        await fetchSeats();
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        showNotification(`Error en liberación distribuida: ${errorMessage}`, 'error');
+        logActivity(`❌ Error en comunicación distribuida: ${errorMessage}`, 'error');
+      }
+    };
+
+    // Función para probar condición de carrera (Race Condition Test)
+    const testRaceCondition = async () => {
+        const seatNumber = 1;
+        const clientName = 'TestClient';
+        
+        logActivity('🧪 Iniciando prueba de condición de carrera distribuida...', 'info');
+        showNotification('Iniciando prueba de consenso distribuido...', 'info');
+        
+        try {
+            // Realizar múltiples reservas simultáneas al mismo asiento desde diferentes nodos
+            const promises = DISTRIBUTED_NODES.map((node, index) => 
+                fetch(`${node}/reservar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        numero: seatNumber,
+                        cliente: `${clientName}_${index + 1}`
+                    })
+                }).then(response => response.json())
+                 .then(result => ({ node, result }))
+                 .catch(error => ({ node, error: error.message }))
+            );
+            
+            const results = await Promise.all(promises);
+            
+            logActivity('📊 Resultados de la prueba de consenso:', 'info');
+            let successCount = 0;
+            
+            results.forEach((item) => {
+                const { node } = item;
+                if ('error' in item) {
+                    logActivity(`❌ ${node}: Error - ${item.error}`, 'error');
+                } else if ('result' in item && item.result.success) {
+                    successCount++;
+                    logActivity(`✅ ${node}: Reserva exitosa`, 'success');
+                } else if ('result' in item) {
+                    logActivity(`⚠️ ${node}: ${item.result.message}`, 'info');
+                }
+            });
+            
+            if (successCount === 1) {
+                showNotification('✅ Consenso distribuido funcionando correctamente - Solo 1 reserva exitosa', 'success');
+                logActivity('🎯 Algoritmo Ricart-Agrawala funcionando correctamente', 'success');
+            } else if (successCount > 1) {
+                showNotification('❌ Error en consenso - Múltiples reservas exitosas', 'error');
+                logActivity('⚠️ Posible fallo en el algoritmo de consenso', 'error');
+            } else {
+                showNotification('⚠️ Ninguna reserva fue exitosa', 'info');
+                logActivity('⚠️ Todos los nodos rechazaron la reserva', 'info');
+            }
+            
+            await fetchSeats();
+            
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            showNotification(`Error en prueba de consenso: ${errorMessage}`, 'error');
+            logActivity(`❌ Error en prueba distribuida: ${errorMessage}`, 'error');
+        }
+    };
+
+    // Event listeners
+    reloadButton.addEventListener('click', fetchSeats);
+    testRaceButton.addEventListener('click', testRaceCondition);
+
+    // Cargar asientos inicialmente
+    logActivity('🚀 Sistema iniciado - Cargando asientos...', 'info');
+    fetchSeats();
+  });
+</script>

@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Base de datos MongoDB
+  mongo:
+    image: mongo:5.0
+    container_name: mongo-distributed
+    ports:
+      - "27018:27017" # Mapea a un puerto diferente para evitar conflictos
+    volumes:
+      - mongo-data-distributed:/data/db
+    networks:
+      - distributed-net
+
+  # Nodos del servidor de reservas (Ricart-Agrawala)
+  # Cada nodo se comunica directamente con los otros (peer-to-peer)
+  server1:
+    build:
+      context: ./server
+    container_name: distributed-server-1
+    ports:
+      - "8081:8081" # Exponer puerto para comunicación directa
+    environment:
+      - SERVER_ID=server1
+      - PEERS=server1,server2,server3
+      - MONGO_URI=mongodb://mongo:27017
+      - PORT=8081
+    networks:
+      - distributed-net
+    depends_on:
+      - mongo
+
+  server2:
+    build:
+      context: ./server
+    container_name: distributed-server-2
+    ports:
+      - "8082:8082" # Exponer puerto para comunicación directa
+    environment:
+      - SERVER_ID=server2
+      - PEERS=server1,server2,server3
+      - MONGO_URI=mongodb://mongo:27017
+      - PORT=8082
+    networks:
+      - distributed-net
+    depends_on:
+      - mongo
+
+  server3:
+    build:
+      context: ./server
+    container_name: distributed-server-3
+    ports:
+      - "8083:8083" # Exponer puerto para comunicación directa
+    environment:
+      - SERVER_ID=server3
+      - PEERS=server1,server2,server3
+      - MONGO_URI=mongodb://mongo:27017
+      - PORT=8083
+    networks:
+      - distributed-net
+    depends_on:
+      - mongo
+
+networks:
+  distributed-net:
+    driver: bridge
+
+volumes:
+  mongo-data-distributed:

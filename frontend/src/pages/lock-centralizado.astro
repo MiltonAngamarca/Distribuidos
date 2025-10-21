@@ -1,0 +1,445 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title='Sistema de Reservas - Lock Centralizado'>
+  <main class='min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8'>
+    <div class='max-w-7xl mx-auto'>
+      <!-- Header -->
+      <header class='text-center mb-8'>
+        <h1 class='text-4xl font-bold text-green-400'>
+          🔒 Sistema con Lock Centralizado
+        </h1>
+        <p class='text-green-400 mt-2'>
+          <span class='font-semibold'>✅ Solución 1:</span> Sistema distribuido con
+          coordinador de locks - Previene condiciones de carrera
+        </p>
+        <div
+          class='mt-4 p-4 bg-green-900/30 rounded-lg border border-green-400/30'
+        >
+          <h3 class='text-lg font-semibold text-green-300 mb-2'>
+            Arquitectura del Sistema:
+          </h3>
+          <div
+            class='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm'
+          >
+            <div class='bg-blue-900/30 p-3 rounded border border-blue-400/30'>
+              <strong class='text-blue-300'>Lock Coordinator</strong><br />
+              Puerto: 8080<br />
+              Gestiona locks distribuidos
+            </div>
+            <div
+              class='bg-purple-900/30 p-3 rounded border border-purple-400/30'
+            >
+              <strong class='text-purple-300'>Servidores de Reserva</strong><br
+              />
+              Puertos: 8081, 8082, 8083<br />
+              Procesan reservas
+            </div>
+            <div
+              class='bg-orange-900/30 p-3 rounded border border-orange-400/30'
+            >
+              <strong class='text-orange-300'>Load Balancer</strong><br />
+              Puerto: 80<br />
+              Distribuye carga
+            </div>
+            <div class='bg-gray-700/30 p-3 rounded border border-gray-400/30'>
+              <strong class='text-gray-300'>MongoDB</strong><br />
+              Puerto: 27017<br />
+              Persistencia de datos
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Panel de Control -->
+      <div
+        class='bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 mb-8 shadow-lg border border-green-400/20'
+      >
+        <div class='grid grid-cols-1 md:grid-cols-4 gap-6'>
+          <!-- Selector de Servidor -->
+          <div>
+            <label
+              for='server-select'
+              class='block text-sm font-medium text-green-300 mb-2'
+              >Endpoint</label
+            >
+            <select
+              id='server-select'
+              class='w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2.5 focus:ring-green-500 focus:border-green-500'
+            >
+              <option value='http://localhost:80'
+                >🔄 Load Balancer (Recomendado)</option
+              >
+              <option value='http://localhost:8081'>🖥️ Servidor 1 (8081)</option
+              >
+              <option value='http://localhost:8082'>🖥️ Servidor 2 (8082)</option
+              >
+              <option value='http://localhost:8083'>🖥️ Servidor 3 (8083)</option
+              >
+            </select>
+          </div>
+
+          <!-- Input de Nombre -->
+          <div>
+            <label
+              for='client-name'
+              class='block text-sm font-medium text-green-300 mb-2'
+              >Tu Nombre</label
+            >
+            <input
+              type='text'
+              id='client-name'
+              class='w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2.5 focus:ring-green-500 focus:border-green-500'
+              placeholder='Ingresa tu nombre'
+            />
+          </div>
+
+          <!-- Botón de Recargar -->
+          <div>
+            <label class='block text-sm font-medium text-transparent mb-2'
+              >Acción</label
+            >
+            <button
+              id='reload-button'
+              class='w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg transition-transform transform hover:scale-105'
+            >
+              🔄 Recargar Asientos
+            </button>
+          </div>
+
+          <!-- Test de Concurrencia -->
+          <div>
+            <label class='block text-sm font-medium text-transparent mb-2'
+              >Test</label
+            >
+            <button
+              id='test-concurrency'
+              class='w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 px-4 rounded-lg transition-transform transform hover:scale-105'
+            >
+              ⚡ Test Concurrencia
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado del Sistema -->
+      <div
+        class='bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 mb-6 shadow-lg border border-green-400/20'
+      >
+        <div class='flex items-center justify-between'>
+          <h3 class='text-lg font-semibold text-green-300'>
+            Estado del Sistema
+          </h3>
+          <div
+            id='system-status'
+            class='flex space-x-4'
+          >
+            <span
+              class='px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm'
+              >🟢 Coordinador: Activo</span
+            >
+            <span
+              class='px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm'
+              >🔵 Servidores: 3/3</span
+            >
+            <span
+              class='px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm'
+              >🟣 MongoDB: Conectado</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Asientos -->
+      <div class='text-center mb-4'>
+        <h2 class='text-2xl font-semibold text-green-300'>
+          Asientos Disponibles
+        </h2>
+        <p class='text-gray-400 mt-1'>
+          Los locks garantizan que solo un cliente pueda reservar cada asiento
+        </p>
+      </div>
+      <div
+        id='seats-container'
+        class='grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-4'
+      >
+        <!-- Los asientos se cargarán aquí -->
+      </div>
+
+      <!-- Log de Actividad -->
+      <div
+        class='mt-8 bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-green-400/20'
+      >
+        <h3 class='text-lg font-semibold text-green-300 mb-4'>
+          Log de Actividad
+        </h3>
+        <div
+          id='activity-log'
+          class='bg-black/50 p-4 rounded-lg h-32 overflow-y-auto text-sm font-mono'
+        >
+          <div class='text-green-400'>
+            Sistema iniciado - Esperando actividad...
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    interface Seat {
+      numero: number;
+      disponible: boolean;
+      cliente?: string;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const serverSelect = document.getElementById(
+        'server-select'
+      ) as HTMLSelectElement;
+      const clientNameInput = document.getElementById(
+        'client-name'
+      ) as HTMLInputElement;
+      const seatsContainer = document.getElementById('seats-container');
+      const reloadButton = document.getElementById('reload-button');
+      const testConcurrencyButton = document.getElementById('test-concurrency');
+      const activityLog = document.getElementById('activity-log');
+
+      if (
+        !serverSelect ||
+        !clientNameInput ||
+        !seatsContainer ||
+        !reloadButton ||
+        !testConcurrencyButton ||
+        !activityLog
+      ) {
+        console.error(
+          'Error: No se pudieron encontrar los elementos del DOM necesarios.'
+        );
+        return;
+      }
+
+      let currentServer = serverSelect.value;
+
+      const logActivity = (
+        message: string,
+        type: 'info' | 'success' | 'error' | 'warning' = 'info'
+      ) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const colors = {
+          info: 'text-blue-400',
+          success: 'text-green-400',
+          error: 'text-red-400',
+          warning: 'text-yellow-400',
+        };
+        const logEntry = document.createElement('div');
+        logEntry.className = colors[type];
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        activityLog.appendChild(logEntry);
+        activityLog.scrollTop = activityLog.scrollHeight;
+      };
+
+      const fetchSeats = async () => {
+        try {
+          logActivity(`Consultando asientos desde ${currentServer}...`, 'info');
+          const response = await fetch(`${currentServer}/asientos`);
+          if (!response.ok)
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const data = await response.json();
+          renderSeats(data.asientos);
+          logActivity(`✅ Asientos cargados correctamente`, 'success');
+        } catch (error: any) {
+          console.error(error);
+          logActivity(`❌ Error al cargar asientos: ${error.message}`, 'error');
+          if (seatsContainer) {
+            seatsContainer.innerHTML = `<p class="text-red-400 col-span-full">❌ Error de conexión: ${error.message}</p>`;
+          }
+        }
+      };
+
+      const renderSeats = (seats: { [key: string]: Seat }) => {
+        if (!seatsContainer) return;
+        seatsContainer.innerHTML = '';
+        
+        // ORDENAR los asientos por número para garantizar una renderización consistente
+        const sortedSeats = Object.values(seats).sort((a, b) => a.numero - b.numero);
+
+        sortedSeats.forEach((seat: Seat) => {
+          const seatElement = document.createElement('div');
+          const isOccupied = !seat.disponible;
+          seatElement.className = `p-3 rounded-lg text-center cursor-pointer transition-all transform hover:scale-110 border-2 ${
+            isOccupied
+              ? 'bg-red-600/70 border-red-400 hover:bg-red-600/90'
+              : 'bg-green-500/80 border-green-400 hover:bg-green-500/90'
+          }`;
+          seatElement.dataset.seatNumber = String(seat.numero);
+
+          if (isOccupied) {
+            seatElement.innerHTML = `<div class="text-lg">🔒</div><div class="text-xs font-bold">${seat.numero}</div><div class="text-xs">${seat.cliente || 'N/A'}</div>`;
+            seatElement.title = `Ocupado por: ${seat.cliente || 'N/A'}`;
+          } else {
+            seatElement.innerHTML = `<div class="text-lg">💺</div><div class="text-xs font-bold">${seat.numero}</div><div class="text-xs">Disponible</div>`;
+            seatElement.title = `Asiento ${seat.numero} - Disponible`;
+          }
+
+          seatElement.addEventListener('click', () =>
+            handleSeatClick(seat.numero, isOccupied)
+          );
+          seatsContainer.appendChild(seatElement);
+        });
+      };
+
+      const handleSeatClick = async (
+        seatNumber: number,
+        isOccupied: boolean
+      ) => {
+        const clientName = clientNameInput.value;
+        if (isOccupied) {
+          await freeSeat(seatNumber);
+        } else {
+          if (!clientName) {
+            alert('Por favor, ingresa tu nombre para reservar.');
+            return;
+          }
+          await reserveSeat(seatNumber, clientName);
+        }
+      };
+
+      const reserveSeat = async (seatNumber: number, clientName: string) => {
+        try {
+          logActivity(
+            `🔒 Intentando reservar asiento ${seatNumber} para ${clientName}...`,
+            'info'
+          );
+          const response = await fetch(`${currentServer}/reservar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ numero: seatNumber, cliente: clientName }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response
+              .json()
+              .catch(() => ({ message: 'Error al reservar' }));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+          }
+
+          logActivity(
+            `✅ Asiento ${seatNumber} reservado exitosamente para ${clientName}`,
+            'success'
+          );
+          await fetchSeats();
+        } catch (error: any) {
+          console.error(error);
+          logActivity(
+            `❌ Error al reservar asiento ${seatNumber}: ${error.message}`,
+            'error'
+          );
+          alert(`No se pudo reservar el asiento: ${error.message}`);
+        }
+      };
+
+      const freeSeat = async (seatNumber: number) => {
+        try {
+          logActivity(`🔓 Liberando asiento ${seatNumber}...`, 'info');
+          const response = await fetch(`${currentServer}/liberar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ numero: seatNumber }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response
+              .json()
+              .catch(() => ({ message: 'Error al liberar' }));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+          }
+
+          logActivity(
+            `✅ Asiento ${seatNumber} liberado exitosamente`,
+            'success'
+          );
+          await fetchSeats();
+        } catch (error: any) {
+          console.error(error);
+          logActivity(
+            `❌ Error al liberar asiento ${seatNumber}: ${error.message}`,
+            'error'
+          );
+          alert(`No se pudo liberar el asiento: ${error.message}`);
+        }
+      };
+
+      const testConcurrency = async () => {
+        const clientName = clientNameInput.value;
+        if (!clientName) {
+          alert('Por favor, ingresa tu nombre para el test de concurrencia.');
+          return;
+        }
+
+        logActivity(
+          `⚡ Iniciando test de concurrencia con ${clientName}...`,
+          'warning'
+        );
+
+        // Intentar reservar múltiples asientos simultáneamente
+        const promises = [];
+        for (let i = 1; i <= 5; i++) {
+          promises.push(
+            fetch(`${currentServer}/reservar`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                numero: i,
+                cliente: `${clientName}-Test${i}`,
+              }),
+            })
+          );
+        }
+
+        try {
+          const results = await Promise.allSettled(promises);
+          let successful = 0;
+          let failed = 0;
+
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.ok) {
+              successful++;
+              logActivity(`✅ Test ${index + 1}: Reserva exitosa`, 'success');
+            } else {
+              failed++;
+              logActivity(
+                `❌ Test ${index + 1}: Reserva falló (esperado por locks)`,
+                'info'
+              );
+            }
+          });
+
+          logActivity(
+            `🏁 Test completado: ${successful} exitosas, ${failed} bloqueadas por locks`,
+            'warning'
+          );
+          await fetchSeats();
+        } catch (error: any) {
+          logActivity(
+            `❌ Error en test de concurrencia: ${error.message}`,
+            'error'
+          );
+        }
+      };
+
+      serverSelect.addEventListener('change', () => {
+        currentServer = serverSelect.value;
+        logActivity(`🔄 Cambiado a servidor: ${currentServer}`, 'info');
+        fetchSeats();
+      });
+
+      reloadButton.addEventListener('click', fetchSeats);
+      testConcurrencyButton.addEventListener('click', testConcurrency);
+
+      // Inicializar
+      logActivity('🚀 Sistema de Lock Centralizado iniciado', 'success');
+      fetchSeats();
+    });
+  </script>
+</Layout>

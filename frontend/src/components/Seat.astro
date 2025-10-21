@@ -1,0 +1,18 @@
+---
+interface Props {
+  numero: number;
+  disponible: boolean;
+  cliente?: string;
+  server_id?: string;
+}
+
+const { numero, disponible, cliente, server_id } = Astro.props;
+---
+
+<div class={`seat ${disponible ? 'disponible' : 'ocupado'}`}>
+  <div class="seat-numero">{numero}</div>
+  <div class="seat-info">
+    <div class="seat-cliente">{cliente || ''}</div>
+    <div class="seat-server">{server_id || ''}</div>
+  </div>
+</div>

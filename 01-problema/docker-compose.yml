@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Servidor 1 - Puerto 8081
+  servidor-1:
+    build: .
+    container_name: reservas-servidor-1
+    environment:
+      - SERVIDOR_ID=servidor-1
+      - PUERTO=8080
+    ports:
+      - "8081:8080"
+    networks:
+      - reservas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Servidor 2 - Puerto 8082
+  servidor-2:
+    build: .
+    container_name: reservas-servidor-2
+    environment:
+      - SERVIDOR_ID=servidor-2
+      - PUERTO=8080
+    ports:
+      - "8082:8080"
+    networks:
+      - reservas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Servidor 3 - Puerto 8083
+  servidor-3:
+    build: .
+    container_name: reservas-servidor-3
+    environment:
+      - SERVIDOR_ID=servidor-3
+      - PUERTO=8080
+    ports:
+      - "8083:8080"
+    networks:
+      - reservas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Load Balancer (nginx) para simular distribución de carga
+  load-balancer:
+    image: nginx:alpine
+    container_name: reservas-load-balancer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - servidor-1
+      - servidor-2
+      - servidor-3
+    networks:
+      - reservas-network
+    restart: unless-stopped
+
+  # Monitor de logs (opcional)
+  log-monitor:
+    image: alpine:latest
+    container_name: reservas-log-monitor
+    command: >
+      sh -c "
+        echo '🔍 Monitor de Logs - Sistema de Reservas con Race Conditions';
+        echo '================================================================';
+        echo 'Servidores disponibles:';
+        echo '  - Servidor 1: http://localhost:8081';
+        echo '  - Servidor 2: http://localhost:8082';
+        echo '  - Servidor 3: http://localhost:8083';
+        echo '  - Load Balancer: http://localhost:8080';
+        echo '';
+        echo 'Para probar race conditions:';
+        echo '  1. Ejecutar: docker-compose logs -f';
+        echo '  2. Ejecutar script de prueba: ./test-race-condition.sh';
+        echo '';
+        echo 'Presiona Ctrl+C para salir...';
+        tail -f /dev/null
+      "
+    networks:
+      - reservas-network
+    restart: unless-stopped
+
+networks:
+  reservas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  nginx-logs:
