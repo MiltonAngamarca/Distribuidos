@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparativa de Soluciones de Concurrencia</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin: 1.5rem 0 1rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .problem {
+            border-top: 4px solid var(--danger);
+        }
+
+        .solution-1 {
+            border-top: 4px solid var(--success);
+        }
+
+        .solution-2 {
+            border-top: 4px solid var(--warning);
+        }
+
+        .diagram {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.8;
+        }
+
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .comparison {
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e9e9e9;
+        }
+
+        .pros-cons {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .pros, .cons {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .pros {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--success);
+        }
+
+        .cons {
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger);
+        }
+
+        .pros h4, .cons h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pros h4::before {
+            content: "✓";
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .cons h4::before {
+            content: "✗";
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .arrow {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .server {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .client {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .coordinator {
+            display: inline-block;
+            background: var(--success);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .pros-cons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎯 Sistemas Distribuidos: Soluciones de Concurrencia</h1>
+        <p>Comparativa de diferentes enfoques para manejar la concurrencia en sistemas distribuidos</p>
+    </header>
+
+    <section>
+        <h2>📋 Introducción</h2>
+        <p>Este documento compara diferentes enfoques para manejar la concurrencia en sistemas distribuidos, desde el problema inicial hasta dos soluciones diferentes: Lock Centralizado y Lock Distribuido (Ricart-Agrawala).</p>
+    </section>
+
+    <section class="container">
+        <article class="card problem">
+            <h2>1️⃣ Problema Inicial</h2>
+            <h3>Race Conditions en Sistemas Distribuidos</h3>
+            
+            <div class="pros-cons">
+                <div class="cons">
+                    <h4>Problemas Detectados</h4>
+                    <ul>
+                        <li>Doble reserva de asientos</li>
+                        <li>Inconsistencia entre servidores</li>
+                        <li>Condiciones de carrera</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>🔍 Código Problemático</h4>
+            <div class="code">
+                <pre>// SIN SINCRONIZACIÓN - INCORRECTO
+func ReservarAsiento(numero int, cliente string) error {
+    if asientos[numero].Disponible {  // ← PROBLEMA: Check-then-act
+        time.Sleep(100 * time.Millisecond) // Simula latencia
+        asientos[numero].Disponible = false
+        asientos[numero].Cliente = cliente
+        return nil
+    }
+    return errors.New("asiento no disponible")
+}</pre>
+            </div>
+
+            <h4>📊 Arquitectura del Sistema</h4>
+            <div class="diagram">
+                <div>Cliente 1 <span class="arrow">→</span> Servidor A</div>
+                <div>Cliente 2 <span class="arrow">→</span> Servidor B</div>
+                <div>Cliente 3 <span class="arrow">→</span> Servidor C</div>
+                <div style="margin-top: 10px;">❌ Sin coordinación entre servidores</div>
+            </div>
+        </article>
+
+        <article class="card solution-1">
+            <h2>2️⃣ Solución 1: Lock Centralizado</h2>
+            <h3>Coordinador Central de Locks</h3>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>Implementación simple</li>
+                        <li>Fácil de entender</li>
+                        <li>Garantiza consistencia</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>Single point of failure</li>
+                        <li>Cuello de botella</li>
+                        <li>No escalable</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>📊 Arquitectura</h4>
+            <div class="diagram">
+                <div><span class="client">Cliente 1</span> ──┐</div>
+                <div><span class="client">Cliente 2</span> ──┼──► <span class="coordinator">Coordinador</span> ──► <span class="server">Servidor A</span></div>
+                <div><span class="client">Cliente 3</span> ──┘      <span style="padding-left: 100px;">(Locks)</span>    └──► <span class="server">Servidor B</span></div>
+                <div style="margin-top: 10px; margin-left: 220px;">└──► <span class="server">Servidor C</span></div>
+            </div>
+
+            <h4>🔑 Protocolo</h4>
+            <ol>
+                <li>Cliente solicita lock al coordinador</li>
+                <li>Coordinador otorga lock si está disponible</li>
+                <li>Cliente realiza operación</li>
+                <li>Cliente libera lock</li>
+            </ol>
+        </article>
+
+        <article class="card solution-2">
+            <h2>3️⃣ Solución 2: Lock Distribuido</h2>
+            <h3>Algoritmo Ricart-Agrawala</h3>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>Sin punto único de fallo</li>
+                        <li>Más escalable</li>
+                        <li>Más tolerante a fallos</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>Mayor complejidad</li>
+                        <li>Más mensajes (O(N) por operación)</li>
+                        <li>Posible inanición</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>📊 Arquitectura</h4>
+            <div class="diagram" style="text-align: center;">
+                <div><span class="server">Servidor A</span> ←──┐</div>
+                <div>    ↕         ├──► Consenso entre todos</div>
+                <div><span class="server">Servidor B</span> ←──┤</div>
+                <div>    ↕         │</div>
+                <div><span class="server">Servidor C</span> ←──┘</div>
+            </div>
+
+            <h4>🔑 Protocolo</h4>
+            <ol>
+                <li>Nodo solicita acceso a la sección crítica</li>
+                <li>Envía mensajes a todos los demás nodos</li>
+                <li>Espera confirmación de la mayoría</li>
+                <li>Entra a la sección crítica</li>
+                <li>Notifica a los demás cuando termina</li>
+            </ol>
+        </article>
+    </section>
+
+    <section class="comparison">
+        <h2>📊 Comparativa de Soluciones</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Aspecto</th>
+                    <th>Sin Sincronización</th>
+                    <th>Lock Centralizado</th>
+                    <th>Lock Distribuido</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Consistencia</td>
+                    <td>❌ No garantizada</td>
+                    <td>✅ Garantizada</td>
+                    <td>✅ Garantizada</td>
+                </tr>
+                <tr>
+                    <td>Disponibilidad</td>
+                    <td>✅ Alta (sin bloqueos)</td>
+                    <td>❌ Baja (SPOF)</td>
+                    <td>✅ Alta</td>
+                </tr>
+                <tr>
+                    <td>Rendimiento</td>
+                    <td>⚡ Muy rápido</td>
+                    <td>🐌 Lento (cuello de botella)</td>
+                    <td>🏃‍♂️ Rápido (paralelismo)</td>
+                </tr>
+                <tr>
+                    <td>Escalabilidad</td>
+                    <td>✅ Ilimitada</td>
+                    <td>❌ Limitada</td>
+                    <td>✅ Buena</td>
+                </tr>
+                <tr>
+                    <td>Complejidad</td>
+                    <td>⭐ Baja</td>
+                    <td>⭐⭐ Media</td>
+                    <td>⭐⭐⭐ Alta</td>
+                </tr>
+                <tr>
+                    <td>Mensajes por operación</td>
+                    <td>0</td>
+                    <td>2 (solicitud + liberación)</td>
+                    <td>2(N-1) (solicitud + respuesta por nodo)</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>📈 Gráficos Comparativos</h2>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; margin: 2rem 0;">
+            <div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>🔒 Tiempo de Espera Promedio</h3>
+                <div style="height: 200px; background: #f5f5f5; margin: 1rem 0; display: flex; align-items: flex-end; justify-content: space-around; padding: 1rem;">
+                    <div style="width: 20%; background: #e74c3c; height: 30%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Bajo</div>
+                    <div style="width: 20%; background: #f39c12; height: 70%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Medio</div>
+                    <div style="width: 20%; background: #2ecc71; height: 100%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Alto</div>
+                </div>
+                <div style="display: flex; justify-content: space-around;">
+                    <div style="text-align: center;">Sin Sincronización</div>
+                    <div style="text-align: center;">Centralizado</div>
+                    <div style="text-align: center;">Distribuido</div>
+                </div>
+            </div>
+
+            <div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>📶 Escalabilidad</h3>
+                <div style="height: 200px; background: #f5f5f5; margin: 1rem 0; display: flex; align-items: flex-end; justify-content: space-around; padding: 1rem;">
+                    <div style="width: 20%; background: #2ecc71; height: 100%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Alta</div>
+                    <div style="width: 20%; background: #f39c12; height: 50%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Media</div>
+                    <div style="width: 20%; background: #e74c3c; height: 20%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Baja</div>
+                </div>
+                <div style="display: flex; justify-content: space-around;">
+                    <div style="text-align: center;">Sin Sincronización</div>
+                    <div style="text-align: center;">Centralizado</div>
+                    <div style="text-align: center;">Distribuido</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>🏁 Conclusión</h2>
+        <p>Cada enfoque tiene sus ventajas y desventajas, y la elección depende de los requisitos específicos del sistema:</p>
+        
+        <ul style="margin: 1rem 0 1rem 2rem;">
+            <li><strong>Sin Sincronización:</strong> Solo para sistemas donde la consistencia no es crítica.</li>
+            <li><strong>Lock Centralizado:</strong> Adecuado para sistemas pequeños con baja concurrencia donde la simplicidad es clave.</li>
+            <li><strong>Lock Distribuido:</strong> Ideal para sistemas grandes, distribuidos y de alta disponibilidad donde la tolerancia a fallos es esencial.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>📊 Documentación de Sistemas Distribuidos - Soluciones de Concurrencia</p>
+    </footer>
+</body>
+</html>
