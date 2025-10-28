@@ -60,7 +60,7 @@
 
         .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: 1fr;
             gap: 2rem;
             margin-bottom: 3rem;
         }
@@ -96,10 +96,7 @@
             border-radius: 8px;
             margin: 1rem 0;
             text-align: center;
-            font-family: 'Courier New', monospace;
-            white-space: pre;
             overflow-x: auto;
-            line-height: 1.8;
         }
 
         .code {
@@ -229,6 +226,59 @@
             font-size: 0.9rem;
         }
 
+        /* Simulador de métricas */
+        .simulator {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 2rem 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin: 0.5rem 0 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .controls input {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            width: 110px;
+        }
+
+        .controls button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background: #2a86c6;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .result-table table {
+            width: 100%;
+        }
+
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
@@ -239,6 +289,9 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <header>
@@ -249,6 +302,45 @@
     <section>
         <h2>📋 Introducción</h2>
         <p>Este documento compara diferentes enfoques para manejar la concurrencia en sistemas distribuidos, desde el problema inicial hasta dos soluciones diferentes: Lock Centralizado y Lock Distribuido (Ricart-Agrawala).</p>
+    </section>
+
+    <section class="simulator">
+        <h2>🧪 Simulación de Métricas</h2>
+        <p>Configura parámetros para estimar mensajes por operación y tiempo promedio.</p>
+        <div class="controls">
+            <div class="control-group"><label for="sim-n">Nodos (N)</label><input type="number" id="sim-n" value="3" min="1"></div>
+            <div class="control-group"><label for="sim-m">Operaciones (M)</label><input type="number" id="sim-m" value="100" min="1"></div>
+            <div class="control-group"><label for="sim-lat">Latencia msg (ms)</label><input type="number" id="sim-lat" value="20" min="0"></div>
+            <div class="control-group"><label for="sim-proc">Proc. por op (ms)</label><input type="number" id="sim-proc" value="50" min="0"></div>
+            <div class="control-group"><label for="sim-over">Overhead coord (ms)</label><input type="number" id="sim-over" value="10" min="0"></div>
+            <div class="control-group"><label><input type="checkbox" id="sim-rand"> Aleatoriedad</label></div>
+            <button id="sim-run">Simular</button>
+        </div>
+
+        <div class="charts">
+            <div>
+                <h3>📨 Mensajes Totales</h3>
+                <canvas id="messagesChart" height="220"></canvas>
+            </div>
+            <div>
+                <h3>⏱️ Tiempo Promedio por Operación</h3>
+                <canvas id="timeChart" height="220"></canvas>
+            </div>
+        </div>
+
+        <div class="result-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Enfoque</th>
+                        <th>Mensajes por operación</th>
+                        <th>Mensajes totales (M)</th>
+                        <th>Tiempo promedio por operación (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="sim-results"></tbody>
+            </table>
+        </div>
     </section>
 
     <section class="container">
@@ -315,10 +407,22 @@ func ReservarAsiento(numero int, cliente string) error {
 
             <h4>📊 Arquitectura</h4>
             <div class="diagram">
-                <div><span class="client">Cliente 1</span> ──┐</div>
-                <div><span class="client">Cliente 2</span> ──┼──► <span class="coordinator">Coordinador</span> ──► <span class="server">Servidor A</span></div>
-                <div><span class="client">Cliente 3</span> ──┘      <span style="padding-left: 100px;">(Locks)</span>    └──► <span class="server">Servidor B</span></div>
-                <div style="margin-top: 10px; margin-left: 220px;">└──► <span class="server">Servidor C</span></div>
+                <div class="mermaid">
+                    flowchart LR
+                      C1[Cliente 1] --> Coord
+                      C2[Cliente 2] --> Coord
+                      C3[Cliente 3] --> Coord
+                      Coord[[Coordinador]]
+                      Coord -->|Lock| SA[Servidor A]
+                      Coord -->|Lock| SB[Servidor B]
+                      Coord -->|Lock| SC[Servidor C]
+                      classDef client fill:#3498db,color:#fff,stroke:#3498db;
+                      classDef coord fill:#2ecc71,color:#fff,stroke:#2ecc71;
+                      classDef server fill:#2c3e50,color:#fff,stroke:#2c3e50;
+                      class C1,C2,C3 client;
+                      class Coord coord;
+                      class SA,SB,SC server;
+                </div>
             </div>
 
             <h4>🔑 Protocolo</h4>
@@ -355,11 +459,19 @@ func ReservarAsiento(numero int, cliente string) error {
 
             <h4>📊 Arquitectura</h4>
             <div class="diagram" style="text-align: center;">
-                <div><span class="server">Servidor A</span> ←──┐</div>
-                <div>    ↕         ├──► Consenso entre todos</div>
-                <div><span class="server">Servidor B</span> ←──┤</div>
-                <div>    ↕         │</div>
-                <div><span class="server">Servidor C</span> ←──┘</div>
+                <div class="mermaid">
+                    flowchart LR
+                      subgraph Consenso["Consenso entre todos"]
+                        SA[Servidor A]
+                        SB[Servidor B]
+                        SC[Servidor C]
+                      end
+                      SA <--> SB
+                      SB <--> SC
+                      SA <--> SC
+                      classDef server fill:#2c3e50,color:#fff,stroke:#2c3e50;
+                      class SA,SB,SC server;
+                </div>
             </div>
 
             <h4>🔑 Protocolo</h4>
@@ -427,34 +539,18 @@ func ReservarAsiento(numero int, cliente string) error {
 
     <section>
         <h2>📈 Gráficos Comparativos</h2>
-        
-        <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; margin: 2rem 0;">
-            <div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h3>🔒 Tiempo de Espera Promedio</h3>
-                <div style="height: 200px; background: #f5f5f5; margin: 1rem 0; display: flex; align-items: flex-end; justify-content: space-around; padding: 1rem;">
-                    <div style="width: 20%; background: #e74c3c; height: 30%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Bajo</div>
-                    <div style="width: 20%; background: #f39c12; height: 70%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Medio</div>
-                    <div style="width: 20%; background: #2ecc71; height: 100%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Alto</div>
-                </div>
-                <div style="display: flex; justify-content: space-around;">
-                    <div style="text-align: center;">Sin Sincronización</div>
-                    <div style="text-align: center;">Centralizado</div>
-                    <div style="text-align: center;">Distribuido</div>
-                </div>
+        <div class="charts" style="margin: 2rem 0;">
+            <div>
+                <h3>🟢 Disponibilidad</h3>
+                <canvas id="availabilityChart" height="220"></canvas>
             </div>
-
-            <div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div>
                 <h3>📶 Escalabilidad</h3>
-                <div style="height: 200px; background: #f5f5f5; margin: 1rem 0; display: flex; align-items: flex-end; justify-content: space-around; padding: 1rem;">
-                    <div style="width: 20%; background: #2ecc71; height: 100%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Alta</div>
-                    <div style="width: 20%; background: #f39c12; height: 50%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Media</div>
-                    <div style="width: 20%; background: #e74c3c; height: 20%; display: flex; align-items: flex-end; justify-content: center; color: white; font-weight: bold;">Baja</div>
-                </div>
-                <div style="display: flex; justify-content: space-around;">
-                    <div style="text-align: center;">Sin Sincronización</div>
-                    <div style="text-align: center;">Centralizado</div>
-                    <div style="text-align: center;">Distribuido</div>
-                </div>
+                <canvas id="scalabilityChart" height="220"></canvas>
+            </div>
+            <div>
+                <h3>⚡ Rendimiento</h3>
+                <canvas id="performanceChart" height="220"></canvas>
             </div>
         </div>
     </section>
@@ -473,5 +569,182 @@ func ReservarAsiento(numero int, cliente string) error {
     <footer>
         <p>📊 Documentación de Sistemas Distribuidos - Soluciones de Concurrencia</p>
     </footer>
+    <script>
+      // Utilidad para valores con aleatoriedad opcional
+      function jitter(base, enabled) {
+        if (!enabled) return base;
+        const factor = 0.7 + Math.random() * 0.6; // ~±30%
+        return Math.max(0, base * factor);
+      }
+
+      function simCompute({ N, M, latency, proc, overhead, randomize }) {
+        // Mensajes por operación
+        const mpo = {
+          sin: 0,
+          central: 2,            // solicitud + liberación
+          distribuido: 2 * (N - 1) // solicitud + respuesta por nodo
+        };
+
+        // Tiempo promedio por operación (estimado)
+        const tpo = {
+          sin: jitter(proc, randomize),
+          central: jitter(proc, randomize) + 2 * jitter(latency, randomize) + jitter(overhead, randomize),
+          distribuido: jitter(proc, randomize) + 2 * (N - 1) * jitter(latency, randomize)
+        };
+
+        return {
+          messagesPerOp: mpo,
+          totalMessages: {
+            sin: mpo.sin * M,
+            central: mpo.central * M,
+            distribuido: mpo.distribuido * M
+          },
+          avgTime: tpo
+        };
+      }
+
+      let messagesChart, timeChart;
+
+      function renderCharts(metrics) {
+        const labels = ["Sin Sincronización", "Lock Centralizado", "Lock Distribuido"];
+        const msgData = [metrics.totalMessages.sin, metrics.totalMessages.central, metrics.totalMessages.distribuido];
+        const timeData = [metrics.avgTime.sin, metrics.avgTime.central, metrics.avgTime.distribuido];
+
+        const colors = ["#e74c3c", "#f39c12", "#2ecc71"];
+
+        // Mensajes
+        const ctx1 = document.getElementById("messagesChart");
+        if (window.Chart) {
+          if (messagesChart) messagesChart.destroy();
+          messagesChart = new Chart(ctx1, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label: "Mensajes totales",
+                data: msgData,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        }
+
+        // Tiempo
+        const ctx2 = document.getElementById("timeChart");
+        if (window.Chart) {
+          if (timeChart) timeChart.destroy();
+          timeChart = new Chart(ctx2, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label: "Tiempo promedio por operación (ms)",
+                data: timeData,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        }
+      }
+
+      function renderTable(metrics, { N, M }) {
+        const tbody = document.getElementById("sim-results");
+        const rows = [
+          {
+            name: "Sin Sincronización",
+            mpo: metrics.messagesPerOp.sin,
+            total: metrics.totalMessages.sin,
+            time: metrics.avgTime.sin
+          },
+          {
+            name: "Lock Centralizado",
+            mpo: metrics.messagesPerOp.central,
+            total: metrics.totalMessages.central,
+            time: metrics.avgTime.central
+          },
+          {
+            name: `Lock Distribuido (N=${N})`,
+            mpo: metrics.messagesPerOp.distribuido,
+            total: metrics.totalMessages.distribuido,
+            time: metrics.avgTime.distribuido
+          }
+        ];
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.mpo}</td>
+            <td>${r.total}</td>
+            <td>${r.time.toFixed(2)}</td>
+          </tr>
+        `).join("");
+      }
+
+      function runSimulation() {
+        const N = parseInt(document.getElementById("sim-n").value, 10);
+        const M = parseInt(document.getElementById("sim-m").value, 10);
+        const latency = parseFloat(document.getElementById("sim-lat").value);
+        const proc = parseFloat(document.getElementById("sim-proc").value);
+        const overhead = parseFloat(document.getElementById("sim-over").value);
+        const randomize = document.getElementById("sim-rand").checked;
+
+        const metrics = simCompute({ N, M, latency, proc, overhead, randomize });
+        renderCharts(metrics);
+        renderTable(metrics, { N, M });
+      }
+
+      document.getElementById("sim-run").addEventListener("click", runSimulation);
+      // Primera ejecución con valores por defecto
+      runSimulation();
+
+      // Gráficos comparativos coherentes con la tabla
+      function renderComparisonCharts() {
+        const labels = ["Sin Sincronización", "Lock Centralizado", "Lock Distribuido"];
+        const colors = ["#3498db", "#f39c12", "#2ecc71"]; // azul, naranja, verde
+
+        // Datos alineados con la tabla:
+        // Disponibilidad: Alta (sin), Baja (centralizado por SPOF), Alta (distribuido)
+        const availability = [95, 35, 90];
+        // Escalabilidad: Ilimitada (sin), Limitada (centralizado), Buena (distribuido)
+        const scalability = [100, 40, 85];
+        // Rendimiento: Muy rápido (sin), Lento (centralizado), Rápido (distribuido)
+        const performance = [95, 40, 80];
+
+        function buildChart(id, label, data) {
+          const ctx = document.getElementById(id);
+          if (!window.Chart || !ctx) return;
+          return new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label,
+                data,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, max: 100 }
+              }
+            }
+          });
+        }
+
+        buildChart("availabilityChart", "Disponibilidad (%)", availability);
+        buildChart("scalabilityChart", "Escalabilidad (%)", scalability);
+        buildChart("performanceChart", "Rendimiento (%)", performance);
+      }
+
+      renderComparisonCharts();
+    </script>
 </body>
 </html>
