@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparativa de Soluciones de Concurrencia</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #2c3e50;
@@ -226,7 +227,6 @@
             font-size: 0.9rem;
         }
 
-        /* Simulador de métricas */
         .simulator {
             background: white;
             border-radius: 10px;
@@ -260,147 +260,155 @@
             background: var(--secondary);
             color: white;
             border: none;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
+            font-weight: 500;
         }
 
         .controls button:hover {
-            background: #2a86c6;
+            background: #2980b9;
         }
 
         .charts {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
         }
 
-        .result-table table {
-            width: 100%;
+        .note {
+            background: #e3f2fd;
+            border-left: 4px solid var(--secondary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .pros-cons {
-                flex-direction: column;
-            }
+        .note strong {
+            color: var(--primary);
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>🎯 Sistemas Distribuidos: Soluciones de Concurrencia</h1>
-        <p>Comparativa de diferentes enfoques para manejar la concurrencia en sistemas distribuidos</p>
+        <h1>🔐 Comparativa de Soluciones de Concurrencia</h1>
+        <p>Análisis de sistemas distribuidos y sincronización</p>
     </header>
 
-    <section>
-        <h2>📋 Introducción</h2>
-        <p>Este documento compara diferentes enfoques para manejar la concurrencia en sistemas distribuidos, desde el problema inicial hasta dos soluciones diferentes: Lock Centralizado y Lock Distribuido (Ricart-Agrawala).</p>
-    </section>
-
-    <section class="simulator">
-        <h2>🧪 Simulación de Métricas</h2>
-        <p>Configura parámetros para estimar mensajes por operación y tiempo promedio.</p>
-        <div class="controls">
-            <div class="control-group"><label for="sim-n">Nodos (N)</label><input type="number" id="sim-n" value="3" min="1"></div>
-            <div class="control-group"><label for="sim-m">Operaciones (M)</label><input type="number" id="sim-m" value="100" min="1"></div>
-            <div class="control-group"><label for="sim-lat">Latencia msg (ms)</label><input type="number" id="sim-lat" value="20" min="0"></div>
-            <div class="control-group"><label for="sim-proc">Proc. por op (ms)</label><input type="number" id="sim-proc" value="50" min="0"></div>
-            <div class="control-group"><label for="sim-over">Overhead coord (ms)</label><input type="number" id="sim-over" value="10" min="0"></div>
-            <div class="control-group"><label><input type="checkbox" id="sim-rand"> Aleatoriedad</label></div>
-            <button id="sim-run">Simular</button>
-        </div>
-
-        <div class="charts">
-            <div>
-                <h3>📨 Mensajes Totales</h3>
-                <canvas id="messagesChart" height="220"></canvas>
-            </div>
-            <div>
-                <h3>⏱️ Tiempo Promedio por Operación</h3>
-                <canvas id="timeChart" height="220"></canvas>
-            </div>
-        </div>
-
-        <div class="result-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Enfoque</th>
-                        <th>Mensajes por operación</th>
-                        <th>Mensajes totales (M)</th>
-                        <th>Tiempo promedio por operación (ms)</th>
-                    </tr>
-                </thead>
-                <tbody id="sim-results"></tbody>
-            </table>
-        </div>
-    </section>
-
     <section class="container">
-        <article class="card problem">
-            <h2>1️⃣ Problema Inicial</h2>
-            <h3>Race Conditions en Sistemas Distribuidos</h3>
+        <div class="card problem">
+            <h2>❌ Problema: Sin Sincronización (Race Condition)</h2>
+            <p>Cuando múltiples procesos acceden simultáneamente a un recurso compartido sin coordinación, ocurren <strong>condiciones de carrera</strong> que generan inconsistencias.</p>
             
-            <div class="pros-cons">
-                <div class="cons">
-                    <h4>Problemas Detectados</h4>
-                    <ul>
-                        <li>Doble reserva de asientos</li>
-                        <li>Inconsistencia entre servidores</li>
-                        <li>Condiciones de carrera</li>
-                    </ul>
-                </div>
-            </div>
-
-            <h4>🔍 Código Problemático</h4>
-            <div class="code">
-                <pre>// SIN SINCRONIZACIÓN - INCORRECTO
-func ReservarAsiento(numero int, cliente string) error {
-    if asientos[numero].Disponible {  // ← PROBLEMA: Check-then-act
-        time.Sleep(100 * time.Millisecond) // Simula latencia
-        asientos[numero].Disponible = false
-        asientos[numero].Cliente = cliente
-        return nil
-    }
-    return errors.New("asiento no disponible")
-}</pre>
-            </div>
-
-            <h4>📊 Arquitectura del Sistema</h4>
+            <h3>Ejemplo: Sistema de Reservas</h3>
             <div class="diagram">
-                <div>Cliente 1 <span class="arrow">→</span> Servidor A</div>
-                <div>Cliente 2 <span class="arrow">→</span> Servidor B</div>
-                <div>Cliente 3 <span class="arrow">→</span> Servidor C</div>
-                <div style="margin-top: 10px;">❌ Sin coordinación entre servidores</div>
+                <p><span class="client">Cliente A</span> → <span class="server">Servidor</span> → Lee: 1 asiento disponible</p>
+                <p><span class="client">Cliente B</span> → <span class="server">Servidor</span> → Lee: 1 asiento disponible</p>
+                <p><span class="server">Servidor</span> → Reserva para Cliente A</p>
+                <p><span class="server">Servidor</span> → Reserva para Cliente B</p>
+                <p style="color: var(--danger); font-weight: bold;">❌ Resultado: ¡2 reservas para 1 asiento!</p>
             </div>
-        </article>
 
-        <article class="card solution-1">
-            <h2>2️⃣ Solución 1: Lock Centralizado</h2>
-            <h3>Coordinador Central de Locks</h3>
-            
+            <div class="code">// Pseudocódigo del problema
+asientos_disponibles = leer_base_datos()  // Thread 1 lee: 1
+asientos_disponibles = leer_base_datos()  // Thread 2 lee: 1
+
+if (asientos_disponibles > 0) {           // Ambos threads pasan
+    reservar_asiento()                     // ¡Doble reserva!
+}</div>
+
             <div class="pros-cons">
                 <div class="pros">
                     <h4>Ventajas</h4>
                     <ul>
+                        <li>Máximo rendimiento (sin esperas)</li>
+                        <li>Sin bloqueos ni cuellos de botella</li>
                         <li>Implementación simple</li>
-                        <li>Fácil de entender</li>
-                        <li>Garantiza consistencia</li>
+                        <li>Escalabilidad ilimitada</li>
                     </ul>
                 </div>
                 <div class="cons">
                     <h4>Desventajas</h4>
                     <ul>
-                        <li>Single point of failure</li>
-                        <li>Cuello de botella</li>
-                        <li>No escalable</li>
+                        <li>❌ <strong>Inconsistencia de datos</strong></li>
+                        <li>Race conditions impredecibles</li>
+                        <li>Difícil de debuggear</li>
+                        <li>Pérdida de operaciones</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card solution-1">
+            <h2>✅ Solución 1: Lock Centralizado</h2>
+            <p>Un <strong>coordinador central</strong> gestiona el acceso exclusivo al recurso crítico. Solo un proceso puede acceder a la vez.</p>
+            
+            <h3>Flujo de Operación</h3>
+            <div class="diagram">
+                <p><span class="client">Cliente A</span> → <span class="coordinator">Coordinador</span>: "Solicito lock"</p>
+                <p><span class="coordinator">Coordinador</span> → <span class="client">Cliente A</span>: "Lock concedido"</p>
+                <p><span class="client">Cliente A</span>: Accede al recurso crítico</p>
+                <p><span class="client">Cliente A</span> → <span class="coordinator">Coordinador</span>: "Libero lock"</p>
+                <p><span class="client">Cliente B</span> → <span class="coordinator">Coordinador</span>: "Solicito lock"</p>
+                <p><span class="coordinator">Coordinador</span> → <span class="client">Cliente B</span>: "Lock concedido"</p>
+            </div>
+
+            <div class="code">// Pseudocódigo con lock centralizado
+lock = coordinador.solicitar_lock(recurso)
+try {
+    asientos = leer_base_datos()
+    if (asientos > 0) {
+        reservar_asiento()
+    }
+} finally {
+    coordinador.liberar_lock(lock)
+}</div>
+
+            <h3>Implementación Real</h3>
+            <div class="code">// Redis como coordinador
+const redis = require('redis');
+const client = redis.createClient();
+
+// Adquirir lock
+const lockKey = 'lock:asiento:5';
+const acquired = await client.set(lockKey, 'locked', {
+    NX: true,  // Solo si no existe
+    EX: 10     // Expira en 10 segundos
+});
+
+if (acquired) {
+    try {
+        // Sección crítica
+        const asientos = await db.query('SELECT * FROM asientos WHERE id = 5');
+        if (asientos.disponible) {
+            await db.query('UPDATE asientos SET disponible = false WHERE id = 5');
+        }
+    } finally {
+        await client.del(lockKey);  // Liberar lock
+    }
+}</div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>✅ Garantiza consistencia</li>
+                        <li>Implementación relativamente simple</li>
+                        <li>Fácil de entender y debuggear</li>
+                        <li>Menor complejidad de mensajes</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>⚠️ <strong>Single Point of Failure (SPOF)</strong></li>
+                        <li>Cuello de botella en alta concurrencia</li>
+                        <li>Baja disponibilidad si falla coordinador</li>
+                        <li>Escalabilidad limitada</li>
                     </ul>
                 </div>
             </div>
@@ -424,35 +432,90 @@ func ReservarAsiento(numero int, cliente string) error {
                       class SA,SB,SC server;
                 </div>
             </div>
+        </div>
 
-            <h4>🔑 Protocolo</h4>
-            <ol>
-                <li>Cliente solicita lock al coordinador</li>
-                <li>Coordinador otorga lock si está disponible</li>
-                <li>Cliente realiza operación</li>
-                <li>Cliente libera lock</li>
-            </ol>
-        </article>
-
-        <article class="card solution-2">
-            <h2>3️⃣ Solución 2: Lock Distribuido</h2>
-            <h3>Algoritmo Ricart-Agrawala</h3>
+        <div class="card solution-2">
+            <h2>✅ Solución 2: Lock Distribuido (Algoritmo de Ricart-Agrawala)</h2>
+            <p>Los nodos se coordinan entre sí mediante <strong>timestamps lógicos</strong>. No hay coordinador central, evitando el SPOF.</p>
             
+            <h3>Flujo de Operación</h3>
+            <div class="diagram">
+                <p><strong>Nodo A</strong> quiere acceder (timestamp = 100):</p>
+                <p><span class="server">Nodo A</span> → <span class="server">Nodo B</span>: "REQUEST(100, recurso)"</p>
+                <p><span class="server">Nodo A</span> → <span class="server">Nodo C</span>: "REQUEST(100, recurso)"</p>
+                <p><span class="server">Nodo B</span> → <span class="server">Nodo A</span>: "REPLY(OK)"</p>
+                <p><span class="server">Nodo C</span> → <span class="server">Nodo A</span>: "REPLY(OK)"</p>
+                <p><span class="server">Nodo A</span>: Accede al recurso crítico</p>
+            </div>
+
+            <div class="code">// Pseudocódigo del algoritmo de Ricart-Agrawala
+class DistributedLock {
+    timestamp = 0;
+    replies_received = 0;
+    
+    async request_access(resource) {
+        this.timestamp = get_logical_clock();
+        this.replies_received = 0;
+        
+        // Enviar REQUEST a todos los nodos
+        for (let node of all_nodes) {
+            if (node != self) {
+                send_to(node, {
+                    type: 'REQUEST',
+                    timestamp: this.timestamp,
+                    resource: resource,
+                    from: self
+                });
+            }
+        }
+        
+        // Esperar respuestas de todos
+        await wait_until(this.replies_received == num_nodes - 1);
+        
+        // Acceder a sección crítica
+        access_resource(resource);
+    }
+    
+    on_receive_request(msg) {
+        if (this.accessing || 
+            (this.requesting && this.timestamp < msg.timestamp)) {
+            // Diferir respuesta
+            queue.push(msg);
+        } else {
+            // Responder inmediatamente
+            send_reply(msg.from);
+        }
+    }
+}</div>
+
+            <h3>Mensajes por Operación</h3>
+            <div class="note">
+                <strong>📊 Complejidad: 2(N-1) mensajes</strong>
+                <ul style="margin-top: 0.5rem;">
+                    <li><strong>N-1</strong> mensajes REQUEST (broadcast a otros nodos)</li>
+                    <li><strong>N-1</strong> mensajes REPLY (respuestas de cada nodo)</li>
+                    <li>Con N=3 nodos: <strong>4 mensajes</strong> (2 REQUEST + 2 REPLY)</li>
+                    <li>Con N=5 nodos: <strong>8 mensajes</strong> (4 REQUEST + 4 REPLY)</li>
+                </ul>
+            </div>
+
             <div class="pros-cons">
                 <div class="pros">
                     <h4>Ventajas</h4>
                     <ul>
-                        <li>Sin punto único de fallo</li>
-                        <li>Más escalable</li>
-                        <li>Más tolerante a fallos</li>
+                        <li>✅ Sin SPOF (sin coordinador central)</li>
+                        <li>Alta disponibilidad y tolerancia a fallos</li>
+                        <li>Garantiza consistencia</li>
+                        <li>Buena escalabilidad horizontal</li>
                     </ul>
                 </div>
                 <div class="cons">
                     <h4>Desventajas</h4>
                     <ul>
-                        <li>Mayor complejidad</li>
-                        <li>Más mensajes (O(N) por operación)</li>
-                        <li>Posible inanición</li>
+                        <li>⚠️ <strong>Complejidad alta</strong> de implementación</li>
+                        <li>Más mensajes de red (overhead)</li>
+                        <li>Requiere sincronización de relojes</li>
+                        <li>Difícil de debuggear</li>
                     </ul>
                 </div>
             </div>
@@ -473,19 +536,74 @@ func ReservarAsiento(numero int, cliente string) error {
                       class SA,SB,SC server;
                 </div>
             </div>
-
-            <h4>🔑 Protocolo</h4>
-            <ol>
-                <li>Nodo solicita acceso a la sección crítica</li>
-                <li>Envía mensajes a todos los demás nodos</li>
-                <li>Espera confirmación de la mayoría</li>
-                <li>Entra a la sección crítica</li>
-                <li>Notifica a los demás cuando termina</li>
-            </ol>
-        </article>
+        </div>
     </section>
 
-    <section class="comparison">
+    <section class="simulator">
+        <h2>🔬 Simulador de Métricas</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+            Configura parámetros para estimar mensajes por operación y tiempo promedio.
+        </p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Nodos (N)</label>
+                <input type="number" id="sim-n" value="3" min="2" max="10">
+            </div>
+            <div class="control-group">
+                <label>Operaciones (M)</label>
+                <input type="number" id="sim-m" value="100" min="1" max="1000">
+            </div>
+            <div class="control-group">
+                <label>Latencia msg (ms)</label>
+                <input type="number" id="sim-lat" value="20" min="1">
+            </div>
+            <div class="control-group">
+                <label>Proc. por op (ms)</label>
+                <input type="number" id="sim-proc" value="50" min="1">
+            </div>
+            <div class="control-group">
+                <label>Overhead coord (ms)</label>
+                <input type="number" id="sim-over" value="10" min="0">
+            </div>
+            <div class="control-group">
+                <label><input type="checkbox" id="sim-rand"> Aleatoriedad</label>
+            </div>
+            <button id="sim-run">Simular</button>
+        </div>
+
+        <div class="note">
+            <strong>📌 Nota importante:</strong> Los "Mensajes por operación" cuentan solo el <strong>overhead de sincronización</strong>. 
+            No incluyen los 2 mensajes base de cualquier operación distribuida (request del cliente + response del servidor).
+        </div>
+
+        <div class="charts">
+            <div>
+                <h3 style="margin-bottom: 1rem;">📬 Mensajes Totales</h3>
+                <canvas id="messagesChart" height="200"></canvas>
+            </div>
+            <div>
+                <h3 style="margin-bottom: 1rem;">⏱️ Tiempo Promedio por Operación</h3>
+                <canvas id="timeChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Enfoque</th>
+                    <th>Mensajes por operación</th>
+                    <th>Mensajes totales (M)</th>
+                    <th>Tiempo promedio por operación (ms)</th>
+                </tr>
+            </thead>
+            <tbody id="sim-results">
+                <!-- Se llena dinámicamente -->
+            </tbody>
+        </table>
+    </section>
+
+    <section>
         <h2>📊 Comparativa de Soluciones</h2>
         <table>
             <thead>
@@ -498,40 +616,46 @@ func ReservarAsiento(numero int, cliente string) error {
             </thead>
             <tbody>
                 <tr>
-                    <td>Consistencia</td>
+                    <td><strong>Consistencia</strong></td>
                     <td>❌ No garantizada</td>
                     <td>✅ Garantizada</td>
                     <td>✅ Garantizada</td>
                 </tr>
                 <tr>
-                    <td>Disponibilidad</td>
+                    <td><strong>Disponibilidad</strong></td>
                     <td>✅ Alta (sin bloqueos)</td>
                     <td>❌ Baja (SPOF)</td>
                     <td>✅ Alta</td>
                 </tr>
                 <tr>
-                    <td>Rendimiento</td>
+                    <td><strong>Rendimiento</strong></td>
                     <td>⚡ Muy rápido</td>
                     <td>🐌 Lento (cuello de botella)</td>
                     <td>🏃‍♂️ Rápido (paralelismo)</td>
                 </tr>
                 <tr>
-                    <td>Escalabilidad</td>
+                    <td><strong>Escalabilidad</strong></td>
                     <td>✅ Ilimitada</td>
                     <td>❌ Limitada</td>
                     <td>✅ Buena</td>
                 </tr>
                 <tr>
-                    <td>Complejidad</td>
+                    <td><strong>Complejidad</strong></td>
                     <td>⭐ Baja</td>
                     <td>⭐⭐ Media</td>
                     <td>⭐⭐⭐ Alta</td>
                 </tr>
                 <tr>
-                    <td>Mensajes por operación</td>
-                    <td>0</td>
-                    <td>2 (solicitud + liberación)</td>
-                    <td>2(N-1) (solicitud + respuesta por nodo)</td>
+                    <td><strong>Mensajes de sincronización</strong></td>
+                    <td>0 (sin overhead)</td>
+                    <td>2 (solicitar + liberar)</td>
+                    <td>2(N-1) (broadcast + respuestas)</td>
+                </tr>
+                <tr>
+                    <td><strong>Tolerancia a fallos</strong></td>
+                    <td>⚠️ Media (datos inconsistentes)</td>
+                    <td>❌ Baja (SPOF en coordinador)</td>
+                    <td>✅ Alta (sin SPOF)</td>
                 </tr>
             </tbody>
         </table>
@@ -552,23 +676,66 @@ func ReservarAsiento(numero int, cliente string) error {
                 <h3>⚡ Rendimiento</h3>
                 <canvas id="performanceChart" height="220"></canvas>
             </div>
+            <div>
+                <h3>🔧 Complejidad de Implementación</h3>
+                <canvas id="complexityChart" height="220"></canvas>
+            </div>
         </div>
     </section>
 
     <section>
         <h2>🏁 Conclusión</h2>
-        <p>Cada enfoque tiene sus ventajas y desventajas, y la elección depende de los requisitos específicos del sistema:</p>
+        <p>Cada enfoque tiene sus ventajas y desventajas. La elección depende de los requisitos específicos del sistema:</p>
         
-        <ul style="margin: 1rem 0 1rem 2rem;">
-            <li><strong>Sin Sincronización:</strong> Solo para sistemas donde la consistencia no es crítica.</li>
-            <li><strong>Lock Centralizado:</strong> Adecuado para sistemas pequeños con baja concurrencia donde la simplicidad es clave.</li>
-            <li><strong>Lock Distribuido:</strong> Ideal para sistemas grandes, distribuidos y de alta disponibilidad donde la tolerancia a fallos es esencial.</li>
-        </ul>
+        <div class="card" style="margin-top: 1rem;">
+            <h3>¿Cuándo usar cada solución?</h3>
+            <ul style="margin: 1rem 0 1rem 2rem; line-height: 2;">
+                <li><strong>Sin Sincronización:</strong> 
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas donde la consistencia perfecta no es crítica</li>
+                        <li>✓ Métricas aproximadas (views, likes)</li>
+                        <li>✓ Logs y analytics</li>
+                        <li>✗ NO usar para transacciones financieras, inventarios, o reservas</li>
+                    </ul>
+                </li>
+                <li><strong>Lock Centralizado:</strong>
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas pequeños o medianos (&lt;1000 ops/seg)</li>
+                        <li>✓ Cuando la simplicidad es prioritaria</li>
+                        <li>✓ Desarrollo rápido y prototipado</li>
+                        <li>✗ NO usar para alta disponibilidad crítica</li>
+                    </ul>
+                </li>
+                <li><strong>Lock Distribuido:</strong>
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas grandes y distribuidos geográficamente</li>
+                        <li>✓ Alta disponibilidad es requisito crítico</li>
+                        <li>✓ Tolerancia a fallos necesaria</li>
+                        <li>✓ Sistemas financieros, reservas, e-commerce</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="note" style="margin-top: 2rem;">
+            <strong>💡 Recomendación:</strong> En producción, considera usar soluciones probadas como:
+            <ul style="margin: 0.5rem 0 0 1.5rem;">
+                <li><strong>Redis Redlock:</strong> Lock distribuido con Redis</li>
+                <li><strong>Etcd:</strong> Sistema de coordinación distribuida</li>
+                <li><strong>Zookeeper:</strong> Servicio de coordinación centralizada con replicación</li>
+                <li><strong>Consul:</strong> Descubrimiento de servicios con locks distribuidos</li>
+            </ul>
+        </div>
     </section>
 
     <footer>
         <p>📊 Documentación de Sistemas Distribuidos - Soluciones de Concurrencia</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #999;">
+            Los valores mostrados son estimaciones basadas en configuraciones típicas. 
+            Los resultados reales pueden variar según la infraestructura y la carga del sistema.
+        </p>
     </footer>
+
     <script>
       // Utilidad para valores con aleatoriedad opcional
       function jitter(base, enabled) {
@@ -578,11 +745,11 @@ func ReservarAsiento(numero int, cliente string) error {
       }
 
       function simCompute({ N, M, latency, proc, overhead, randomize }) {
-        // Mensajes por operación
+        // Mensajes de SINCRONIZACIÓN por operación (overhead, sin contar operación base)
         const mpo = {
-          sin: 0,
-          central: 2,            // solicitud + liberación
-          distribuido: 2 * (N - 1) // solicitud + respuesta por nodo
+          sin: 0,                    // Sin overhead de sincronización
+          central: 2,                // solicitud + liberación al coordinador
+          distribuido: 2 * (N - 1)   // REQUEST + REPLY por cada nodo
         };
 
         // Tiempo promedio por operación (estimado)
@@ -621,14 +788,31 @@ func ReservarAsiento(numero int, cliente string) error {
             data: {
               labels,
               datasets: [{
-                label: "Mensajes totales",
+                label: "Mensajes de sincronización totales",
                 data: msgData,
                 backgroundColor: colors
               }]
             },
             options: {
-              plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true } }
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return 'Mensajes: ' + context.parsed.y;
+                    }
+                  }
+                }
+              },
+              scales: { 
+                y: { 
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Número de mensajes'
+                  }
+                } 
+              }
             }
           });
         }
@@ -648,8 +832,25 @@ func ReservarAsiento(numero int, cliente string) error {
               }]
             },
             options: {
-              plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true } }
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return 'Tiempo: ' + context.parsed.y.toFixed(2) + ' ms';
+                    }
+                  }
+                }
+              },
+              scales: { 
+                y: { 
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Milisegundos (ms)'
+                  }
+                } 
+              }
             }
           });
         }
@@ -701,23 +902,30 @@ func ReservarAsiento(numero int, cliente string) error {
       }
 
       document.getElementById("sim-run").addEventListener("click", runSimulation);
+      
       // Primera ejecución con valores por defecto
       runSimulation();
 
-      // Gráficos comparativos coherentes con la tabla
+      // Gráficos comparativos con valores realistas y coherentes
       function renderComparisonCharts() {
         const labels = ["Sin Sincronización", "Lock Centralizado", "Lock Distribuido"];
-        const colors = ["#3498db", "#f39c12", "#2ecc71"]; // azul, naranja, verde
+        
+        // Colores consistentes
+        const colors = ["#e74c3c", "#f39c12", "#2ecc71"];
 
-        // Datos alineados con la tabla:
-        // Disponibilidad: Alta (sin), Baja (centralizado por SPOF), Alta (distribuido)
+        // Disponibilidad: Alta (sin), Baja (centralizado SPOF), Alta (distribuido)
         const availability = [95, 35, 90];
+        
         // Escalabilidad: Ilimitada (sin), Limitada (centralizado), Buena (distribuido)
         const scalability = [100, 40, 85];
+        
         // Rendimiento: Muy rápido (sin), Lento (centralizado), Rápido (distribuido)
         const performance = [95, 40, 80];
+        
+        // Complejidad: Baja (sin), Media (centralizado), Alta (distribuido)
+        const complexity = [20, 50, 90];
 
-        function buildChart(id, label, data) {
+        function buildChart(id, label, data, yLabel) {
           const ctx = document.getElementById(id);
           if (!window.Chart || !ctx) return;
           return new Chart(ctx, {
@@ -731,17 +939,34 @@ func ReservarAsiento(numero int, cliente string) error {
               }]
             },
             options: {
-              plugins: { legend: { display: false } },
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.parsed.y + (yLabel === '%' ? '%' : '');
+                    }
+                  }
+                }
+              },
               scales: {
-                y: { beginAtZero: true, max: 100 }
+                y: { 
+                  beginAtZero: true, 
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: yLabel
+                  }
+                }
               }
             }
           });
         }
 
-        buildChart("availabilityChart", "Disponibilidad (%)", availability);
-        buildChart("scalabilityChart", "Escalabilidad (%)", scalability);
-        buildChart("performanceChart", "Rendimiento (%)", performance);
+        buildChart("availabilityChart", "Disponibilidad", availability, "Porcentaje (%)");
+        buildChart("scalabilityChart", "Escalabilidad", scalability, "Porcentaje (%)");
+        buildChart("performanceChart", "Rendimiento", performance, "Porcentaje (%)");
+        buildChart("complexityChart", "Complejidad", complexity, "Nivel de complejidad");
       }
 
       renderComparisonCharts();
