@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparativa de Soluciones de Concurrencia</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin: 1.5rem 0 1rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .problem {
+            border-top: 4px solid var(--danger);
+        }
+
+        .solution-1 {
+            border-top: 4px solid var(--success);
+        }
+
+        .solution-2 {
+            border-top: 4px solid var(--warning);
+        }
+
+        .diagram {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .comparison {
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e9e9e9;
+        }
+
+        .pros-cons {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .pros, .cons {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .pros {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--success);
+        }
+
+        .cons {
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger);
+        }
+
+        .pros h4, .cons h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pros h4::before {
+            content: "✓";
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .cons h4::before {
+            content: "✗";
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .arrow {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .server {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .client {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .coordinator {
+            display: inline-block;
+            background: var(--success);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .simulator {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 2rem 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin: 0.5rem 0 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .controls input {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            width: 110px;
+        }
+
+        .controls button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .controls button:hover {
+            background: #2980b9;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .note {
+            background: #e3f2fd;
+            border-left: 4px solid var(--secondary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .note strong {
+            color: var(--primary);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+</head>
+<body>
+    <header>
+        <h1>🔐 Comparativa de Soluciones de Concurrencia</h1>
+        <p>Análisis de sistemas distribuidos y sincronización</p>
+    </header>
+
+    <section class="container">
+        <div class="card problem">
+            <h2>❌ Problema: Sin Sincronización (Race Condition)</h2>
+            <p>Cuando múltiples procesos acceden simultáneamente a un recurso compartido sin coordinación, ocurren <strong>condiciones de carrera</strong> que generan inconsistencias.</p>
+            
+            <h3>Ejemplo: Sistema de Reservas</h3>
+            <div class="diagram">
+                <p><span class="client">Cliente A</span> → <span class="server">Servidor</span> → Lee: 1 asiento disponible</p>
+                <p><span class="client">Cliente B</span> → <span class="server">Servidor</span> → Lee: 1 asiento disponible</p>
+                <p><span class="server">Servidor</span> → Reserva para Cliente A</p>
+                <p><span class="server">Servidor</span> → Reserva para Cliente B</p>
+                <p style="color: var(--danger); font-weight: bold;">❌ Resultado: ¡2 reservas para 1 asiento!</p>
+            </div>
+
+            <div class="code">// Pseudocódigo del problema
+asientos_disponibles = leer_base_datos()  // Thread 1 lee: 1
+asientos_disponibles = leer_base_datos()  // Thread 2 lee: 1
+
+if (asientos_disponibles > 0) {           // Ambos threads pasan
+    reservar_asiento()                     // ¡Doble reserva!
+}</div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>Máximo rendimiento (sin esperas)</li>
+                        <li>Sin bloqueos ni cuellos de botella</li>
+                        <li>Implementación simple</li>
+                        <li>Escalabilidad ilimitada</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>❌ <strong>Inconsistencia de datos</strong></li>
+                        <li>Race conditions impredecibles</li>
+                        <li>Difícil de debuggear</li>
+                        <li>Pérdida de operaciones</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card solution-1">
+            <h2>✅ Solución 1: Lock Centralizado</h2>
+            <p>Un <strong>coordinador central</strong> gestiona el acceso exclusivo al recurso crítico. Solo un proceso puede acceder a la vez.</p>
+            
+            <h3>Flujo de Operación</h3>
+            <div class="diagram">
+                <p><span class="client">Cliente A</span> → <span class="coordinator">Coordinador</span>: "Solicito lock"</p>
+                <p><span class="coordinator">Coordinador</span> → <span class="client">Cliente A</span>: "Lock concedido"</p>
+                <p><span class="client">Cliente A</span>: Accede al recurso crítico</p>
+                <p><span class="client">Cliente A</span> → <span class="coordinator">Coordinador</span>: "Libero lock"</p>
+                <p><span class="client">Cliente B</span> → <span class="coordinator">Coordinador</span>: "Solicito lock"</p>
+                <p><span class="coordinator">Coordinador</span> → <span class="client">Cliente B</span>: "Lock concedido"</p>
+            </div>
+
+            <div class="code">// Pseudocódigo con lock centralizado
+lock = coordinador.solicitar_lock(recurso)
+try {
+    asientos = leer_base_datos()
+    if (asientos > 0) {
+        reservar_asiento()
+    }
+} finally {
+    coordinador.liberar_lock(lock)
+}</div>
+
+            <h3>Implementación Real</h3>
+            <div class="code">// Redis como coordinador
+const redis = require('redis');
+const client = redis.createClient();
+
+// Adquirir lock
+const lockKey = 'lock:asiento:5';
+const acquired = await client.set(lockKey, 'locked', {
+    NX: true,  // Solo si no existe
+    EX: 10     // Expira en 10 segundos
+});
+
+if (acquired) {
+    try {
+        // Sección crítica
+        const asientos = await db.query('SELECT * FROM asientos WHERE id = 5');
+        if (asientos.disponible) {
+            await db.query('UPDATE asientos SET disponible = false WHERE id = 5');
+        }
+    } finally {
+        await client.del(lockKey);  // Liberar lock
+    }
+}</div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>✅ Garantiza consistencia</li>
+                        <li>Implementación relativamente simple</li>
+                        <li>Fácil de entender y debuggear</li>
+                        <li>Menor complejidad de mensajes</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>⚠️ <strong>Single Point of Failure (SPOF)</strong></li>
+                        <li>Cuello de botella en alta concurrencia</li>
+                        <li>Baja disponibilidad si falla coordinador</li>
+                        <li>Escalabilidad limitada</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>📊 Arquitectura</h4>
+            <div class="diagram">
+                <div class="mermaid">
+                    flowchart LR
+                      C1[Cliente 1] --> Coord
+                      C2[Cliente 2] --> Coord
+                      C3[Cliente 3] --> Coord
+                      Coord[[Coordinador]]
+                      Coord -->|Lock| SA[Servidor A]
+                      Coord -->|Lock| SB[Servidor B]
+                      Coord -->|Lock| SC[Servidor C]
+                      classDef client fill:#3498db,color:#fff,stroke:#3498db;
+                      classDef coord fill:#2ecc71,color:#fff,stroke:#2ecc71;
+                      classDef server fill:#2c3e50,color:#fff,stroke:#2c3e50;
+                      class C1,C2,C3 client;
+                      class Coord coord;
+                      class SA,SB,SC server;
+                </div>
+            </div>
+        </div>
+
+        <div class="card solution-2">
+            <h2>✅ Solución 2: Lock Distribuido (Algoritmo de Ricart-Agrawala)</h2>
+            <p>Los nodos se coordinan entre sí mediante <strong>timestamps lógicos</strong>. No hay coordinador central, evitando el SPOF.</p>
+            
+            <h3>Flujo de Operación</h3>
+            <div class="diagram">
+                <p><strong>Nodo A</strong> quiere acceder (timestamp = 100):</p>
+                <p><span class="server">Nodo A</span> → <span class="server">Nodo B</span>: "REQUEST(100, recurso)"</p>
+                <p><span class="server">Nodo A</span> → <span class="server">Nodo C</span>: "REQUEST(100, recurso)"</p>
+                <p><span class="server">Nodo B</span> → <span class="server">Nodo A</span>: "REPLY(OK)"</p>
+                <p><span class="server">Nodo C</span> → <span class="server">Nodo A</span>: "REPLY(OK)"</p>
+                <p><span class="server">Nodo A</span>: Accede al recurso crítico</p>
+            </div>
+
+            <div class="code">// Pseudocódigo del algoritmo de Ricart-Agrawala
+class DistributedLock {
+    timestamp = 0;
+    replies_received = 0;
+    
+    async request_access(resource) {
+        this.timestamp = get_logical_clock();
+        this.replies_received = 0;
+        
+        // Enviar REQUEST a todos los nodos
+        for (let node of all_nodes) {
+            if (node != self) {
+                send_to(node, {
+                    type: 'REQUEST',
+                    timestamp: this.timestamp,
+                    resource: resource,
+                    from: self
+                });
+            }
+        }
+        
+        // Esperar respuestas de todos
+        await wait_until(this.replies_received == num_nodes - 1);
+        
+        // Acceder a sección crítica
+        access_resource(resource);
+    }
+    
+    on_receive_request(msg) {
+        if (this.accessing || 
+            (this.requesting && this.timestamp < msg.timestamp)) {
+            // Diferir respuesta
+            queue.push(msg);
+        } else {
+            // Responder inmediatamente
+            send_reply(msg.from);
+        }
+    }
+}</div>
+
+            <h3>Mensajes por Operación</h3>
+            <div class="note">
+                <strong>📊 Complejidad: 2(N-1) mensajes</strong>
+                <ul style="margin-top: 0.5rem;">
+                    <li><strong>N-1</strong> mensajes REQUEST (broadcast a otros nodos)</li>
+                    <li><strong>N-1</strong> mensajes REPLY (respuestas de cada nodo)</li>
+                    <li>Con N=3 nodos: <strong>4 mensajes</strong> (2 REQUEST + 2 REPLY)</li>
+                    <li>Con N=5 nodos: <strong>8 mensajes</strong> (4 REQUEST + 4 REPLY)</li>
+                </ul>
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Ventajas</h4>
+                    <ul>
+                        <li>✅ Sin SPOF (sin coordinador central)</li>
+                        <li>Alta disponibilidad y tolerancia a fallos</li>
+                        <li>Garantiza consistencia</li>
+                        <li>Buena escalabilidad horizontal</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Desventajas</h4>
+                    <ul>
+                        <li>⚠️ <strong>Complejidad alta</strong> de implementación</li>
+                        <li>Más mensajes de red (overhead)</li>
+                        <li>Requiere sincronización de relojes</li>
+                        <li>Difícil de debuggear</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h4>📊 Arquitectura</h4>
+            <div class="diagram" style="text-align: center;">
+                <div class="mermaid">
+                    flowchart LR
+                      subgraph Consenso["Consenso entre todos"]
+                        SA[Servidor A]
+                        SB[Servidor B]
+                        SC[Servidor C]
+                      end
+                      SA <--> SB
+                      SB <--> SC
+                      SA <--> SC
+                      classDef server fill:#2c3e50,color:#fff,stroke:#2c3e50;
+                      class SA,SB,SC server;
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="simulator">
+        <h2>🔬 Simulador de Métricas</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+            Configura parámetros para estimar mensajes por operación y tiempo promedio.
+        </p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Nodos (N)</label>
+                <input type="number" id="sim-n" value="3" min="2" max="10">
+            </div>
+            <div class="control-group">
+                <label>Operaciones (M)</label>
+                <input type="number" id="sim-m" value="100" min="1" max="1000">
+            </div>
+            <div class="control-group">
+                <label>Latencia msg (ms)</label>
+                <input type="number" id="sim-lat" value="20" min="1">
+            </div>
+            <div class="control-group">
+                <label>Proc. por op (ms)</label>
+                <input type="number" id="sim-proc" value="50" min="1">
+            </div>
+            <div class="control-group">
+                <label>Overhead coord (ms)</label>
+                <input type="number" id="sim-over" value="10" min="0">
+            </div>
+            <div class="control-group">
+                <label><input type="checkbox" id="sim-rand"> Aleatoriedad</label>
+            </div>
+            <button id="sim-run">Simular</button>
+        </div>
+
+        <div class="note">
+            <strong>📌 Nota importante:</strong> Los "Mensajes por operación" cuentan solo el <strong>overhead de sincronización</strong>. 
+            No incluyen los 2 mensajes base de cualquier operación distribuida (request del cliente + response del servidor).
+        </div>
+
+        <div class="charts">
+            <div>
+                <h3 style="margin-bottom: 1rem;">📬 Mensajes Totales</h3>
+                <canvas id="messagesChart" height="200"></canvas>
+            </div>
+            <div>
+                <h3 style="margin-bottom: 1rem;">⏱️ Tiempo Promedio por Operación</h3>
+                <canvas id="timeChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Enfoque</th>
+                    <th>Mensajes por operación</th>
+                    <th>Mensajes totales (M)</th>
+                    <th>Tiempo promedio por operación (ms)</th>
+                </tr>
+            </thead>
+            <tbody id="sim-results">
+                <!-- Se llena dinámicamente -->
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>📊 Comparativa de Soluciones</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Aspecto</th>
+                    <th>Sin Sincronización</th>
+                    <th>Lock Centralizado</th>
+                    <th>Lock Distribuido</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Consistencia</strong></td>
+                    <td>❌ No garantizada</td>
+                    <td>✅ Garantizada</td>
+                    <td>✅ Garantizada</td>
+                </tr>
+                <tr>
+                    <td><strong>Disponibilidad</strong></td>
+                    <td>✅ Alta (sin bloqueos)</td>
+                    <td>❌ Baja (SPOF)</td>
+                    <td>✅ Alta</td>
+                </tr>
+                <tr>
+                    <td><strong>Rendimiento</strong></td>
+                    <td>⚡ Muy rápido</td>
+                    <td>🐌 Lento (cuello de botella)</td>
+                    <td>🏃‍♂️ Rápido (paralelismo)</td>
+                </tr>
+                <tr>
+                    <td><strong>Escalabilidad</strong></td>
+                    <td>✅ Ilimitada</td>
+                    <td>❌ Limitada</td>
+                    <td>✅ Buena</td>
+                </tr>
+                <tr>
+                    <td><strong>Complejidad</strong></td>
+                    <td>⭐ Baja</td>
+                    <td>⭐⭐ Media</td>
+                    <td>⭐⭐⭐ Alta</td>
+                </tr>
+                <tr>
+                    <td><strong>Mensajes de sincronización</strong></td>
+                    <td>0 (sin overhead)</td>
+                    <td>2 (solicitar + liberar)</td>
+                    <td>2(N-1) (broadcast + respuestas)</td>
+                </tr>
+                <tr>
+                    <td><strong>Tolerancia a fallos</strong></td>
+                    <td>⚠️ Media (datos inconsistentes)</td>
+                    <td>❌ Baja (SPOF en coordinador)</td>
+                    <td>✅ Alta (sin SPOF)</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>📈 Gráficos Comparativos</h2>
+        <div class="charts" style="margin: 2rem 0;">
+            <div>
+                <h3>🟢 Disponibilidad</h3>
+                <canvas id="availabilityChart" height="220"></canvas>
+            </div>
+            <div>
+                <h3>📶 Escalabilidad</h3>
+                <canvas id="scalabilityChart" height="220"></canvas>
+            </div>
+            <div>
+                <h3>⚡ Rendimiento</h3>
+                <canvas id="performanceChart" height="220"></canvas>
+            </div>
+            <div>
+                <h3>🔧 Complejidad de Implementación</h3>
+                <canvas id="complexityChart" height="220"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>🏁 Conclusión</h2>
+        <p>Cada enfoque tiene sus ventajas y desventajas. La elección depende de los requisitos específicos del sistema:</p>
+        
+        <div class="card" style="margin-top: 1rem;">
+            <h3>¿Cuándo usar cada solución?</h3>
+            <ul style="margin: 1rem 0 1rem 2rem; line-height: 2;">
+                <li><strong>Sin Sincronización:</strong> 
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas donde la consistencia perfecta no es crítica</li>
+                        <li>✓ Métricas aproximadas (views, likes)</li>
+                        <li>✓ Logs y analytics</li>
+                        <li>✗ NO usar para transacciones financieras, inventarios, o reservas</li>
+                    </ul>
+                </li>
+                <li><strong>Lock Centralizado:</strong>
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas pequeños o medianos (&lt;1000 ops/seg)</li>
+                        <li>✓ Cuando la simplicidad es prioritaria</li>
+                        <li>✓ Desarrollo rápido y prototipado</li>
+                        <li>✗ NO usar para alta disponibilidad crítica</li>
+                    </ul>
+                </li>
+                <li><strong>Lock Distribuido:</strong>
+                    <ul style="margin-left: 2rem;">
+                        <li>✓ Sistemas grandes y distribuidos geográficamente</li>
+                        <li>✓ Alta disponibilidad es requisito crítico</li>
+                        <li>✓ Tolerancia a fallos necesaria</li>
+                        <li>✓ Sistemas financieros, reservas, e-commerce</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="note" style="margin-top: 2rem;">
+            <strong>💡 Recomendación:</strong> En producción, considera usar soluciones probadas como:
+            <ul style="margin: 0.5rem 0 0 1.5rem;">
+                <li><strong>Redis Redlock:</strong> Lock distribuido con Redis</li>
+                <li><strong>Etcd:</strong> Sistema de coordinación distribuida</li>
+                <li><strong>Zookeeper:</strong> Servicio de coordinación centralizada con replicación</li>
+                <li><strong>Consul:</strong> Descubrimiento de servicios con locks distribuidos</li>
+            </ul>
+        </div>
+    </section>
+
+    <footer>
+        <p>📊 Documentación de Sistemas Distribuidos - Soluciones de Concurrencia</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #999;">
+            Los valores mostrados son estimaciones basadas en configuraciones típicas. 
+            Los resultados reales pueden variar según la infraestructura y la carga del sistema.
+        </p>
+    </footer>
+
+    <script>
+      // Utilidad para valores con aleatoriedad opcional
+      function jitter(base, enabled) {
+        if (!enabled) return base;
+        const factor = 0.7 + Math.random() * 0.6; // ~±30%
+        return Math.max(0, base * factor);
+      }
+
+      function simCompute({ N, M, latency, proc, overhead, randomize }) {
+        // Mensajes de SINCRONIZACIÓN por operación (overhead, sin contar operación base)
+        const mpo = {
+          sin: 0,                    // Sin overhead de sincronización
+          central: 2,                // solicitud + liberación al coordinador
+          distribuido: 2 * (N - 1)   // REQUEST + REPLY por cada nodo
+        };
+
+        // Tiempo promedio por operación (estimado)
+        const tpo = {
+          sin: jitter(proc, randomize),
+          central: jitter(proc, randomize) + 2 * jitter(latency, randomize) + jitter(overhead, randomize),
+          distribuido: jitter(proc, randomize) + 2 * (N - 1) * jitter(latency, randomize)
+        };
+
+        return {
+          messagesPerOp: mpo,
+          totalMessages: {
+            sin: mpo.sin * M,
+            central: mpo.central * M,
+            distribuido: mpo.distribuido * M
+          },
+          avgTime: tpo
+        };
+      }
+
+      let messagesChart, timeChart;
+
+      function renderCharts(metrics) {
+        const labels = ["Sin Sincronización", "Lock Centralizado", "Lock Distribuido"];
+        const msgData = [metrics.totalMessages.sin, metrics.totalMessages.central, metrics.totalMessages.distribuido];
+        const timeData = [metrics.avgTime.sin, metrics.avgTime.central, metrics.avgTime.distribuido];
+
+        const colors = ["#e74c3c", "#f39c12", "#2ecc71"];
+
+        // Mensajes
+        const ctx1 = document.getElementById("messagesChart");
+        if (window.Chart) {
+          if (messagesChart) messagesChart.destroy();
+          messagesChart = new Chart(ctx1, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label: "Mensajes de sincronización totales",
+                data: msgData,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return 'Mensajes: ' + context.parsed.y;
+                    }
+                  }
+                }
+              },
+              scales: { 
+                y: { 
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Número de mensajes'
+                  }
+                } 
+              }
+            }
+          });
+        }
+
+        // Tiempo
+        const ctx2 = document.getElementById("timeChart");
+        if (window.Chart) {
+          if (timeChart) timeChart.destroy();
+          timeChart = new Chart(ctx2, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label: "Tiempo promedio por operación (ms)",
+                data: timeData,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return 'Tiempo: ' + context.parsed.y.toFixed(2) + ' ms';
+                    }
+                  }
+                }
+              },
+              scales: { 
+                y: { 
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Milisegundos (ms)'
+                  }
+                } 
+              }
+            }
+          });
+        }
+      }
+
+      function renderTable(metrics, { N, M }) {
+        const tbody = document.getElementById("sim-results");
+        const rows = [
+          {
+            name: "Sin Sincronización",
+            mpo: metrics.messagesPerOp.sin,
+            total: metrics.totalMessages.sin,
+            time: metrics.avgTime.sin
+          },
+          {
+            name: "Lock Centralizado",
+            mpo: metrics.messagesPerOp.central,
+            total: metrics.totalMessages.central,
+            time: metrics.avgTime.central
+          },
+          {
+            name: `Lock Distribuido (N=${N})`,
+            mpo: metrics.messagesPerOp.distribuido,
+            total: metrics.totalMessages.distribuido,
+            time: metrics.avgTime.distribuido
+          }
+        ];
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.mpo}</td>
+            <td>${r.total}</td>
+            <td>${r.time.toFixed(2)}</td>
+          </tr>
+        `).join("");
+      }
+
+      function runSimulation() {
+        const N = parseInt(document.getElementById("sim-n").value, 10);
+        const M = parseInt(document.getElementById("sim-m").value, 10);
+        const latency = parseFloat(document.getElementById("sim-lat").value);
+        const proc = parseFloat(document.getElementById("sim-proc").value);
+        const overhead = parseFloat(document.getElementById("sim-over").value);
+        const randomize = document.getElementById("sim-rand").checked;
+
+        const metrics = simCompute({ N, M, latency, proc, overhead, randomize });
+        renderCharts(metrics);
+        renderTable(metrics, { N, M });
+      }
+
+      document.getElementById("sim-run").addEventListener("click", runSimulation);
+      
+      // Primera ejecución con valores por defecto
+      runSimulation();
+
+      // Gráficos comparativos con valores realistas y coherentes
+      function renderComparisonCharts() {
+        const labels = ["Sin Sincronización", "Lock Centralizado", "Lock Distribuido"];
+        
+        // Colores consistentes
+        const colors = ["#e74c3c", "#f39c12", "#2ecc71"];
+
+        // Disponibilidad: Alta (sin), Baja (centralizado SPOF), Alta (distribuido)
+        const availability = [95, 35, 90];
+        
+        // Escalabilidad: Ilimitada (sin), Limitada (centralizado), Buena (distribuido)
+        const scalability = [100, 40, 85];
+        
+        // Rendimiento: Muy rápido (sin), Lento (centralizado), Rápido (distribuido)
+        const performance = [95, 40, 80];
+        
+        // Complejidad: Baja (sin), Media (centralizado), Alta (distribuido)
+        const complexity = [20, 50, 90];
+
+        function buildChart(id, label, data, yLabel) {
+          const ctx = document.getElementById(id);
+          if (!window.Chart || !ctx) return;
+          return new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels,
+              datasets: [{
+                label,
+                data,
+                backgroundColor: colors
+              }]
+            },
+            options: {
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.parsed.y + (yLabel === '%' ? '%' : '');
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: { 
+                  beginAtZero: true, 
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: yLabel
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        buildChart("availabilityChart", "Disponibilidad", availability, "Porcentaje (%)");
+        buildChart("scalabilityChart", "Escalabilidad", scalability, "Porcentaje (%)");
+        buildChart("performanceChart", "Rendimiento", performance, "Porcentaje (%)");
+        buildChart("complexityChart", "Complejidad", complexity, "Nivel de complejidad");
+      }
+
+      renderComparisonCharts();
+    </script>
+</body>
+</html>

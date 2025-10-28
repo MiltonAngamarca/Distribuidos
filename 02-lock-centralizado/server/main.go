@@ -435,6 +435,9 @@ func main() {
 
 	// Configurar rutas
 	r := mux.NewRouter()
+
+       // ...existing code...
+
 	r.HandleFunc("/asientos", server.handleGetAsientos).Methods("GET")
 	r.HandleFunc("/reservar", server.handleReservarAsiento).Methods("POST")
 	r.HandleFunc("/liberar", server.handleLiberarAsiento).Methods("POST")

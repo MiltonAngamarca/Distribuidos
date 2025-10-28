@@ -274,10 +274,13 @@ func main() {
 
 	// Configurar rutas
 	r := mux.NewRouter()
-	r.HandleFunc("/acquire", coordinator.handleAcquireLock).Methods("POST")
-	r.HandleFunc("/release", coordinator.handleReleaseLock).Methods("POST")
-	r.HandleFunc("/status/{resource}", coordinator.handleGetLockStatus).Methods("GET")
-	r.HandleFunc("/health", coordinator.handleHealthCheck).Methods("GET")
+
+       // ...existing code...
+
+	r.HandleFunc("/acquire", coordinator.handleAcquireLock).Methods("POST", "OPTIONS")
+	r.HandleFunc("/release", coordinator.handleReleaseLock).Methods("POST", "OPTIONS")
+	r.HandleFunc("/status/{resource}", coordinator.handleGetLockStatus).Methods("GET", "OPTIONS")
+	r.HandleFunc("/health", coordinator.handleHealthCheck).Methods("GET", "OPTIONS")
 
 
 	port := ":8080"

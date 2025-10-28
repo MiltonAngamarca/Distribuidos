@@ -76,20 +76,40 @@ func (s *Server) handleReservarAsiento(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	
+	log.Printf("[%s] Received POST /reservar from %s", s.serverID, r.RemoteAddr)
 	var req struct {
 		Numero  int    `json:"numero"`
 		Cliente string `json:"cliente"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Error decoding /reservar body: %v", s.serverID, err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	log.Printf("[%s] /reservar payload: %+v", s.serverID, req)
 
 	// 1. Solicitar acceso a la sección crítica
 	log.Printf("[%s] Requesting CS to reserve seat %d", s.serverID, req.Numero)
-	s.node.RequestCS()
-	log.Printf("[%s] Granted CS to reserve seat %d", s.serverID, req.Numero)
+
+	// Llamar RequestCS pero con timeout para evitar bloqueo indefinido
+	csDone := make(chan struct{})
+	go func() {
+		s.node.RequestCS()
+		close(csDone)
+	}()
+
+	select {
+	case <-csDone:
+		log.Printf("[%s] Granted CS to reserve seat %d", s.serverID, req.Numero)
+	case <-time.After(10 * time.Second):
+		log.Printf("[%s] Timeout waiting for CS to reserve seat %d", s.serverID, req.Numero)
+
+		// Limpiar el estado del nodo para evitar deadlocks futuros.
+		s.node.CancelCSRequest()
+		http.Error(w, "Timeout acquiring distributed lock", http.StatusGatewayTimeout)
+		return
+	}
 
 	// Defer la liberación de la sección crítica
 	defer s.node.ReleaseCS()
@@ -124,11 +144,13 @@ func (s *Server) handleReservarAsiento(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	_, err = s.collection.UpdateOne(context.Background(), bson.M{"numero": req.Numero}, update)
+	res, err := s.collection.UpdateOne(context.Background(), bson.M{"numero": req.Numero}, update)
 	if err != nil {
+		log.Printf("[%s] Failed to update seat %d: %v", s.serverID, req.Numero, err)
 		http.Error(w, "Failed to update seat", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[%s] UpdateOne modified count: %d for seat %d", s.serverID, res.ModifiedCount, req.Numero)
 
 	response := map[string]interface{}{
 		"success": true,
@@ -146,17 +168,36 @@ func (s *Server) handleLiberarAsiento(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	
+	log.Printf("[%s] Received POST /liberar from %s", s.serverID, r.RemoteAddr)
 	var req struct {
 		Numero int `json:"numero"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Error decoding /liberar body: %v", s.serverID, err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	log.Printf("[%s] /liberar payload: %+v", s.serverID, req)
 
-	// Solicitar acceso a la sección crítica
-	s.node.RequestCS()
+	// Solicitar acceso a la sección crítica con timeout
+	csDone2 := make(chan struct{})
+	go func() {
+		s.node.RequestCS()
+		close(csDone2)
+	}()
+
+	select {
+	case <-csDone2:
+		// proceed
+	case <-time.After(10 * time.Second):
+		log.Printf("[%s] Timeout waiting for CS to free seat %d", s.serverID, req.Numero)
+
+		// Limpiar el estado del nodo para evitar deadlocks futuros.
+		s.node.CancelCSRequest()
+		http.Error(w, "Timeout acquiring distributed lock", http.StatusGatewayTimeout)
+		return
+	}
 	defer s.node.ReleaseCS()
 
 	// Verificar que el asiento existe y está ocupado
@@ -293,11 +334,14 @@ func main() {
 	// Middleware CORS para manejar preflight requests
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Log every incoming request for debugging network/CORS issues
+			log.Printf("[CORS MW] Incoming %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			
 			if r.Method == "OPTIONS" {
+				log.Printf("[CORS MW] Handling preflight (OPTIONS) for %s", r.URL.Path)
 				w.WriteHeader(http.StatusOK)
 				return
 			}
